@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "244704747666",
+    "firebase_url": "https://pruebaringprivate100-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "pruebaringprivate100",
+    "storage_bucket": "pruebaringprivate100.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244704747666:android:7d009574ea350a356c064b",
+        "android_client_info": {
+          "package_name": "com.example.the_ring_private_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4I4k1M7rxCc-630dzd2DMpoo4axtrYFQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244704747666:android:b9ec84a70b20804a6c064b",
+        "android_client_info": {
+          "package_name": "com.example.theringprivate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4I4k1M7rxCc-630dzd2DMpoo4axtrYFQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
