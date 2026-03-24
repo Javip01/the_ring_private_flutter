@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:async';
-import 'dart:ui'; // Necesario para el efecto de desenfoque
+import 'dart:ui';
+
 import 'settings_screen.dart';
 import 'profile_screen.dart';
+import 'news_screen.dart';
+import 'global_chat_screen.dart';
+import 'staff_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // Lógica del QR idéntica a tu Kotlin
   void _iniciarGeneracionQR() {
     setState(() => _isQrVisible = true);
     _generarNuevoQR();
@@ -85,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: const Center(child: Text('FOTO CABECERA', style: TextStyle(color: Colors.white38))),
                     ),
-                    // BOTÓN AJUSTES (Ahora funciona)
+                    // BOTÓN AJUSTES
                     Positioned(
                       top: 40,
                       right: 16,
@@ -108,17 +111,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisSpacing: 16,
                     childAspectRatio: 1.2,
                     children: [
-                      // BOTÓN PERFIL (Ahora funciona)
+                      // BOTÓN PERFIL
                       _buildGridButton('Perfil', Icons.person, () => Navigator.push(context, _crearRutaAnimada(const ProfileScreen()))),
 
                       // BOTÓN NOTICIAS
-                      _buildGridButton('Tablón Noticias', Icons.notifications_active, () {}, badge: '3'), // Lo haremos luego
+                      _buildGridButton('Tablón Noticias', Icons.notifications_active, () => Navigator.push(context, _crearRutaAnimada(const NewsScreen())), badge: 'NUEVO'),
 
                       // BOTÓN GLOBAL
-                      _buildGridButton('Chat Global', Icons.public, () {}), // Lo haremos luego
+                      _buildGridButton('Chat Global', Icons.public, () => Navigator.push(context, _crearRutaAnimada(const GlobalChatScreen()))),
 
                       // BOTÓN STAFF
-                      _buildGridButton('Chat STAFF', Icons.support_agent, () {}), // Lo haremos luego
+                      _buildGridButton('Chat STAFF', Icons.support_agent, () => Navigator.push(context, _crearRutaAnimada(const StaffChatScreen()))),
                     ],
                   ),
                 ),
@@ -184,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: FloatingActionButton(
               heroTag: 'qr',
               backgroundColor: const Color(0xFFA30000),
-              onPressed: _iniciarGeneracionQR, // Activa el overlay
+              onPressed: _iniciarGeneracionQR,
               child: const Icon(Icons.qr_code, color: Colors.white, size: 30),
             ),
           ),
@@ -194,27 +197,27 @@ class _HomeScreenState extends State<HomeScreen> {
           // ==========================================
           if (_isQrVisible)
             GestureDetector(
-              onTap: _cerrarQR, // Cerrar si tocas fuera
+              onTap: _cerrarQR,
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
                 duration: const Duration(milliseconds: 300),
                 builder: (context, value, child) {
                   return BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10 * value, sigmaY: 10 * value), // Desenfoque premium
+                    filter: ImageFilter.blur(sigmaX: 10 * value, sigmaY: 10 * value),
                     child: Container(
-                      color: Colors.black.withOpacity(0.85 * value), // Fondo #EB000000
+                      color: Colors.black.withOpacity(0.85 * value),
                       child: child,
                     ),
                   );
                 },
                 child: Center(
                   child: GestureDetector(
-                    onTap: () {}, // Evitar que se cierre si tocas la caja
+                    onTap: () {},
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 24),
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A1A), // Fondo caja QR
+                        color: const Color(0xFF1A1A1A),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Column(
@@ -227,7 +230,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Text('Este código caduca cada 15 segundos', style: TextStyle(color: Color(0xFFFF4C4C), fontSize: 14)),
                           const SizedBox(height: 24),
 
-                          // Tarjeta blanca del QR
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
@@ -275,8 +277,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- MÉTODOS DE DISEÑO Y NAVEGACIÓN ---
-
   Widget _buildGridButton(String title, IconData icon, VoidCallback onTap, {String? badge}) {
     return InkWell(
       onTap: onTap,
@@ -306,7 +306,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Color(int.parse(hexColor.replaceFirst('#', '0xFF'))), borderRadius: BorderRadius.circular(8)), child: Text(text, style: TextStyle(color: isBold ? Colors.white : const Color(0xFFE0E0E0), fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, height: 1.3)));
   }
 
-  // Animación de transición suave "Fade" (como tenías en tus fragmentos)
   Route _crearRutaAnimada(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
