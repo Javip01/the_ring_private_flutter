@@ -29,8 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final ValueNotifier<Offset?> _waPositionNotifier = ValueNotifier(null);
   final double _waDiameter = 60.0;
   final double _repulsionAuraPadding = 30.0;
-
-  // NUEVO: Guarda el punto exacto donde tocaste el botón para que no resbale
   Offset _dragOffset = Offset.zero;
 
   // --- ABRIR WHATSAPP ---
@@ -42,77 +40,109 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- POP-UP DE AJUSTES ---
+  // --- NUEVO: MENÚ DESPLEGABLE SUPERIOR DERECHO ---
   void _mostrarDropdownAjustes() {
-    showModalBottomSheet(
+    showGeneralDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return ValueListenableBuilder<ThemeMode>(
-          valueListenable: TheRingPrivateApp.themeNotifier,
-          builder: (context, currentTheme, _) {
-            return ValueListenableBuilder<bool>(
-              valueListenable: TheRingPrivateApp.isEnglishNotifier,
-              builder: (context, isEng, _) {
-                final bgColor = currentTheme == ThemeMode.dark ? const Color(0xFF1E1E1E) : Colors.white;
-                final textColor = currentTheme == ThemeMode.dark ? Colors.white : Colors.black87;
+      barrierDismissible: true,
+      barrierLabel: 'Cerrar Menú',
+      transitionDuration: const Duration(milliseconds: 250), // Duración de la animación
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return SafeArea(
+          child: Align(
+            alignment: Alignment.topRight, // Lo ancla arriba a la derecha
+            child: Padding(
+              padding: const EdgeInsets.only(top: 60.0, right: 16.0), // Ajustado para que quede debajo de las 3 rayitas
+              child: Material(
+                color: Colors.transparent,
+                child: ValueListenableBuilder<ThemeMode>(
+                  valueListenable: TheRingPrivateApp.themeNotifier,
+                  builder: (context, currentTheme, _) {
+                    return ValueListenableBuilder<bool>(
+                      valueListenable: TheRingPrivateApp.isEnglishNotifier,
+                      builder: (context, isEng, _) {
+                        final bgColor = currentTheme == ThemeMode.dark ? const Color(0xFF1E1E1E) : Colors.white;
+                        final textColor = currentTheme == ThemeMode.dark ? Colors.white : Colors.black87;
 
-                return Container(
-                  decoration: BoxDecoration(color: bgColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
-                  padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(children: [
-                        const Icon(Icons.language, color: Color(0xFFA30000)),
-                        const SizedBox(width: 8),
-                        Text(isEng ? 'Language' : 'Idioma', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                      ]),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          _buildOption(isEng, '🇪🇸 ESPAÑOL', !isEng, () => TheRingPrivateApp.isEnglishNotifier.value = false),
-                          _buildOption(isEng, '🇬🇧 ENGLISH', isEng, () => TheRingPrivateApp.isEnglishNotifier.value = true),
-                        ],
-                      ),
-                      const Divider(height: 32),
-                      Row(children: [
-                        const Icon(Icons.palette, color: Color(0xFFA30000)),
-                        const SizedBox(width: 8),
-                        Text(isEng ? 'Appearance' : 'Apariencia', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                      ]),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          _buildOption(isEng, isEng ? 'Light' : 'Claro', currentTheme == ThemeMode.light, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light),
-                          _buildOption(isEng, isEng ? 'Dark' : 'Oscuro', currentTheme == ThemeMode.dark, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark),
-                        ],
-                      ),
-                      const Divider(height: 32),
-                      InkWell(
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        return Container(
+                          width: 280, // Ancho fijo para que salga chiquito
+                          decoration: BoxDecoration(
+                              color: bgColor,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(0, 5))
+                              ]
+                          ),
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min, // Ajusta su altura al contenido
                             children: [
-                              const Icon(Icons.settings, color: Color(0xFFA30000)),
-                              const SizedBox(width: 10),
-                              Text(isEng ? 'MORE OPTIONS' : 'MÁS OPCIONES', style: const TextStyle(color: Color(0xFFA30000), fontSize: 18, fontWeight: FontWeight.bold)),
+                              Row(children: [
+                                const Icon(Icons.language, color: Color(0xFFA30000), size: 20),
+                                const SizedBox(width: 8),
+                                Text(isEng ? 'Language' : 'Idioma', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                              ]),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  _buildOption(isEng, '🇪🇸 ES', !isEng, () => TheRingPrivateApp.isEnglishNotifier.value = false),
+                                  const SizedBox(width: 8),
+                                  _buildOption(isEng, '🇬🇧 EN', isEng, () => TheRingPrivateApp.isEnglishNotifier.value = true),
+                                ],
+                              ),
+                              const Divider(height: 32),
+                              Row(children: [
+                                const Icon(Icons.palette, color: Color(0xFFA30000), size: 20),
+                                const SizedBox(width: 8),
+                                Text(isEng ? 'Appearance' : 'Apariencia', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                              ]),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  _buildOption(isEng, isEng ? 'Light' : 'Claro', currentTheme == ThemeMode.light, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light),
+                                  const SizedBox(width: 8),
+                                  _buildOption(isEng, isEng ? 'Dark' : 'Oscuro', currentTheme == ThemeMode.dark, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark),
+                                ],
+                              ),
+                              const Divider(height: 32),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.settings, color: Color(0xFFA30000), size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(isEng ? 'MORE OPTIONS' : 'MÁS OPCIONES', style: const TextStyle(color: Color(0xFFA30000), fontSize: 15, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              )
                             ],
                           ),
-                        ),
-                      )
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      // AQUÍ ESTÁ LA ANIMACIÓN SUAVE DESDE LA ESQUINA
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          alignment: Alignment.topRight, // Punto de origen de la animación (las 3 rayitas)
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
         );
       },
     );
@@ -122,10 +152,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: isActive ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent, borderRadius: BorderRadius.circular(12)),
-          child: Center(child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? const Color(0xFFA30000) : Colors.grey))),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+              color: isActive ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: isActive ? const Color(0xFFA30000).withOpacity(0.3) : Colors.transparent)
+          ),
+          child: Center(
+              child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isActive ? const Color(0xFFA30000) : Colors.grey))
+          ),
         ),
       ),
     );
@@ -214,6 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('THE RING', style: TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 18)),
+                        // Este es el botón del menú de 3 rayitas
                         IconButton(icon: const Icon(Icons.menu, color: rojoRing, size: 28), onPressed: _mostrarDropdownAjustes)
                       ],
                     ),
@@ -263,35 +301,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           // ==========================================
-          // CAPA 3: BOTÓN DE WHATSAPP (SEGUIMIENTO ABSOLUTO 1:1)
+          // CAPA 3: BOTÓN DE WHATSAPP
           // ==========================================
           ValueListenableBuilder<Offset?>(
             valueListenable: _waPositionNotifier,
             builder: (context, position, child) {
               if (position == null) return const SizedBox.shrink();
 
-              return Positioned(
+              return AnimatedPositioned(
+                duration: const Duration(milliseconds: 50),
+                curve: Curves.easeOut,
                 left: position.dx,
                 top: position.dy,
                 child: GestureDetector(
                   onTap: _abrirWhatsApp,
-
-                  // NUEVO: Guardamos dónde toca exactamente el dedo dentro del botón
                   onPanStart: (details) {
                     _dragOffset = details.localPosition;
                   },
-
-                  // NUEVO: Calculamos la posición exacta usando la posición global del dedo
                   onPanUpdate: (details) {
-                    // Posición absoluta requerida por el dedo
                     double newX = details.globalPosition.dx - _dragOffset.dx;
                     double newY = details.globalPosition.dy - _dragOffset.dy;
 
-                    // 1. Limitar a los bordes de la pantalla
                     newX = newX.clamp(0.0, size.width - _waDiameter);
                     newY = newY.clamp(0.0, size.height - _waDiameter);
 
-                    // 2. Lógica del Aura (Repelente del QR Central)
                     RenderBox? qrBox = _qrButtonKey.currentContext?.findRenderObject() as RenderBox?;
                     if (qrBox != null && qrBox.hasSize) {
                       Offset qrGlobalPos = qrBox.localToGlobal(Offset.zero);
@@ -304,7 +337,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       double dist = math.sqrt(math.pow(waCenterX - qrCenterX, 2) + math.pow(waCenterY - qrCenterY, 2));
                       double minSafe = _qrRadius + (_waDiameter / 2) + _repulsionAuraPadding;
 
-                      // Si el dedo mete el botón en el aura, lo forzamos al borde
                       if (dist < minSafe) {
                         double angle = math.atan2(waCenterY - qrCenterY, waCenterX - qrCenterX);
                         newX = qrCenterX + minSafe * math.cos(angle) - _waDiameter / 2;
@@ -325,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: _waDiameter,
               height: _waDiameter,
               child: Image.asset(
-                'lib/assets/WhatsApp_icon.png', // <-- Tu ruta
+                'lib/assets/WhatsApp_icon.png',
                 fit: BoxFit.contain,
                 errorBuilder: (ctx, err, stackTrace) => Container(
                   decoration: const BoxDecoration(
