@@ -15,7 +15,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   // --- VARIABLES DEL QR ---
   String _currentQrData = "CARGANDO";
   int _secondsLeft = 60;
@@ -31,6 +31,40 @@ class _HomeScreenState extends State<HomeScreen> {
   final double _repulsionAuraPadding = 30.0;
   Offset _dragOffset = Offset.zero;
 
+  // --- VARIABLES DEL MENÚ ANIMADO ---
+  late AnimationController _menuController;
+  late Animation<double> _menuAnimation;
+  bool _isMenuOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Animación directa y suave: Sin rebotes (easeOutCubic) y un poco más rápida (200ms)
+    _menuController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+    _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_waPositionNotifier.value == null) {
+      final size = MediaQuery.of(context).size;
+      if (size.width > 0) {
+        _waPositionNotifier.value = Offset(
+            size.width - _waDiameter - 20,
+            size.height - _waDiameter - 120
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _menuController.dispose();
+    _qrTimer?.cancel();
+    super.dispose();
+  }
+
   // --- ABRIR WHATSAPP ---
   void _abrirWhatsApp() async {
     const String telefono = "34123456789"; // CAMBIA ESTO POR EL NÚMERO DEL CLUB
@@ -40,109 +74,90 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- NUEVO: MENÚ DESPLEGABLE SUPERIOR DERECHO ---
-  void _mostrarDropdownAjustes() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Cerrar Menú',
-      transitionDuration: const Duration(milliseconds: 250), // Duración de la animación
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return SafeArea(
-          child: Align(
-            alignment: Alignment.topRight, // Lo ancla arriba a la derecha
-            child: Padding(
-              padding: const EdgeInsets.only(top: 60.0, right: 16.0), // Ajustado para que quede debajo de las 3 rayitas
-              child: Material(
-                color: Colors.transparent,
-                child: ValueListenableBuilder<ThemeMode>(
-                  valueListenable: TheRingPrivateApp.themeNotifier,
-                  builder: (context, currentTheme, _) {
-                    return ValueListenableBuilder<bool>(
-                      valueListenable: TheRingPrivateApp.isEnglishNotifier,
-                      builder: (context, isEng, _) {
-                        final bgColor = currentTheme == ThemeMode.dark ? const Color(0xFF1E1E1E) : Colors.white;
-                        final textColor = currentTheme == ThemeMode.dark ? Colors.white : Colors.black87;
+  // --- LÓGICA DEL MENÚ ---
+  void _toggleMenu() {
+    if (_isMenuOpen) {
+      _menuController.reverse().then((_) => setState(() => _isMenuOpen = false));
+    } else {
+      setState(() => _isMenuOpen = true);
+      _menuController.forward();
+    }
+  }
 
-                        return Container(
-                          width: 280, // Ancho fijo para que salga chiquito
-                          decoration: BoxDecoration(
-                              color: bgColor,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(0, 5))
-                              ]
-                          ),
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min, // Ajusta su altura al contenido
+  // WIDGET DEL MENÚ PRE-CARGADO
+  Widget _buildMenuContent() {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: TheRingPrivateApp.themeNotifier,
+      builder: (context, currentTheme, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: TheRingPrivateApp.isEnglishNotifier,
+          builder: (context, isEng, _) {
+            final bgColor = currentTheme == ThemeMode.dark ? const Color(0xFF1E1E1E) : Colors.white;
+            final textColor = currentTheme == ThemeMode.dark ? Colors.white : Colors.black87;
+
+            return Material(
+              color: bgColor,
+              elevation: 15,
+              shadowColor: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+              child: SizedBox(
+                width: 260,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(children: [
+                        const Icon(Icons.language, color: Color(0xFFA30000), size: 20),
+                        const SizedBox(width: 8),
+                        Text(isEng ? 'Language' : 'Idioma', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ]),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          _buildOption(isEng, '🇪🇸 ES', !isEng, () => TheRingPrivateApp.isEnglishNotifier.value = false),
+                          const SizedBox(width: 8),
+                          _buildOption(isEng, '🇬🇧 EN', isEng, () => TheRingPrivateApp.isEnglishNotifier.value = true),
+                        ],
+                      ),
+                      const Divider(height: 32),
+                      Row(children: [
+                        const Icon(Icons.palette, color: Color(0xFFA30000), size: 20),
+                        const SizedBox(width: 8),
+                        Text(isEng ? 'Appearance' : 'Apariencia', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ]),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          _buildOption(isEng, isEng ? 'Light' : 'Claro', currentTheme == ThemeMode.light, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light),
+                          const SizedBox(width: 8),
+                          _buildOption(isEng, isEng ? 'Dark' : 'Oscuro', currentTheme == ThemeMode.dark, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark),
+                        ],
+                      ),
+                      const Divider(height: 32),
+                      InkWell(
+                        onTap: () {
+                          _toggleMenu();
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Row(children: [
-                                const Icon(Icons.language, color: Color(0xFFA30000), size: 20),
-                                const SizedBox(width: 8),
-                                Text(isEng ? 'Language' : 'Idioma', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                              ]),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  _buildOption(isEng, '🇪🇸 ES', !isEng, () => TheRingPrivateApp.isEnglishNotifier.value = false),
-                                  const SizedBox(width: 8),
-                                  _buildOption(isEng, '🇬🇧 EN', isEng, () => TheRingPrivateApp.isEnglishNotifier.value = true),
-                                ],
-                              ),
-                              const Divider(height: 32),
-                              Row(children: [
-                                const Icon(Icons.palette, color: Color(0xFFA30000), size: 20),
-                                const SizedBox(width: 8),
-                                Text(isEng ? 'Appearance' : 'Apariencia', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                              ]),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  _buildOption(isEng, isEng ? 'Light' : 'Claro', currentTheme == ThemeMode.light, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light),
-                                  const SizedBox(width: 8),
-                                  _buildOption(isEng, isEng ? 'Dark' : 'Oscuro', currentTheme == ThemeMode.dark, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark),
-                                ],
-                              ),
-                              const Divider(height: 32),
-                              InkWell(
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.settings, color: Color(0xFFA30000), size: 20),
-                                      const SizedBox(width: 8),
-                                      Text(isEng ? 'MORE OPTIONS' : 'MÁS OPCIONES', style: const TextStyle(color: Color(0xFFA30000), fontSize: 15, fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              )
+                              const Icon(Icons.settings, color: Color(0xFFA30000), size: 20),
+                              const SizedBox(width: 8),
+                              Text(isEng ? 'MORE OPTIONS' : 'MÁS OPCIONES', style: const TextStyle(color: Color(0xFFA30000), fontSize: 14, fontWeight: FontWeight.bold)),
                             ],
                           ),
-                        );
-                      },
-                    );
-                  },
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      },
-      // AQUÍ ESTÁ LA ANIMACIÓN SUAVE DESDE LA ESQUINA
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-          alignment: Alignment.topRight, // Punto de origen de la animación (las 3 rayitas)
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+            );
+          },
         );
       },
     );
@@ -160,9 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: isActive ? const Color(0xFFA30000).withOpacity(0.3) : Colors.transparent)
           ),
-          child: Center(
-              child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isActive ? const Color(0xFFA30000) : Colors.grey))
-          ),
+          child: Center(child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isActive ? const Color(0xFFA30000) : Colors.grey))),
         ),
       ),
     );
@@ -229,10 +242,6 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     final size = MediaQuery.of(context).size;
 
-    if (_waPositionNotifier.value == null && size.width > 0) {
-      _waPositionNotifier.value = Offset(size.width - _waDiameter - 20, size.height - _waDiameter - 120);
-    }
-
     return Scaffold(
       body: Stack(
         children: [
@@ -251,8 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('THE RING', style: TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 18)),
-                        // Este es el botón del menú de 3 rayitas
-                        IconButton(icon: const Icon(Icons.menu, color: rojoRing, size: 28), onPressed: _mostrarDropdownAjustes)
+                        IconButton(icon: const Icon(Icons.menu, color: rojoRing, size: 28), onPressed: _toggleMenu)
                       ],
                     ),
                   ),
@@ -315,9 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: position.dy,
                 child: GestureDetector(
                   onTap: _abrirWhatsApp,
-                  onPanStart: (details) {
-                    _dragOffset = details.localPosition;
-                  },
+                  onPanStart: (details) => _dragOffset = details.localPosition,
                   onPanUpdate: (details) {
                     double newX = details.globalPosition.dx - _dragOffset.dx;
                     double newY = details.globalPosition.dy - _dragOffset.dy;
@@ -360,12 +366,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 'lib/assets/WhatsApp_icon.png',
                 fit: BoxFit.contain,
                 errorBuilder: (ctx, err, stackTrace) => Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8)],
-                  ),
+                  decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
                   child: const Icon(Icons.chat, color: Colors.white, size: 30),
+                ),
+              ),
+            ),
+          ),
+
+          // ==========================================
+          // CAPA 4: MENÚ DESPLEGABLE SUPERIOR DERECHO
+          // ==========================================
+          if (_isMenuOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleMenu,
+                child: Container(),
+              ),
+            ),
+
+          Positioned(
+            top: 90,
+            right: 16,
+            child: IgnorePointer(
+              ignoring: !_isMenuOpen,
+              child: FadeTransition(
+                opacity: _menuAnimation,
+                child: ScaleTransition(
+                  scale: _menuAnimation,
+                  alignment: Alignment.topRight, // Emerge recto, sin rebote
+                  child: _buildMenuContent(),
                 ),
               ),
             ),
