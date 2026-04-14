@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart'; // Añadido
-import 'dart:async';
+import 'package:firebase_database/firebase_database.dart';
 import 'register_screen.dart';
-import 'home_screen.dart'; // Añadido para poder navegar
+import 'home_screen.dart';
+import '../main.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,227 +16,187 @@ class _LoginScreenState extends State<LoginScreen> {
   final _userController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
-  int _colorIndex = 0;
-  final List<List<Color>> _auroraColors = [
-    [const Color(0xFF000000), const Color(0xFF110000), const Color(0xFF4D0000)],
-    [const Color(0xFF110000), const Color(0xFF4D0000), const Color(0xFF110000)],
-    [const Color(0xFF4D0000), const Color(0xFF110000), const Color(0xFF000000)],
-    [const Color(0xFF110000), const Color(0xFF330000), const Color(0xFF110000)],
-  ];
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 6), (timer) {
-      if (mounted) setState(() => _colorIndex = (_colorIndex + 1) % _auroraColors.length);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _signIn() async {
+  Future<void> _signIn(bool isEng) async {
     setState(() => _isLoading = true);
     try {
       String userInput = _userController.text.trim();
-      String password = _passwordController.text.trim();
-      String loginEmail = "";
-
-      // Si tiene '@', es correo. Si no, es DNI.
-      if (userInput.contains('@')) {
-        loginEmail = userInput;
-      } else {
-        String dni = userInput.toUpperCase();
-
-        // --- AQUÍ ESTÁ EL PUNTO CRÍTICO ---
-        final snapshot = await FirebaseDatabase.instance.ref("MapeoDNI").child(dni).get();
-
-        if (snapshot.exists) {
-          loginEmail = snapshot.value.toString();
-        } else {
-          loginEmail = '${dni.toLowerCase()}@thering.local';
-        }
+      String loginEmail = userInput.contains('@') ? userInput : '';
+      if (!userInput.contains('@')) {
+        final snapshot = await FirebaseDatabase.instance.ref("MapeoDNI").child(userInput.toUpperCase()).get();
+        loginEmail = snapshot.exists ? snapshot.value.toString() : '${userInput.toLowerCase()}@thering.local';
       }
-
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: loginEmail,
-        password: password,
-      );
-
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: loginEmail, password: _passwordController.text.trim());
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
-
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
     } catch (e) {
-      // ¡AHORA EL ERROR NOS DIRÁ LA VERDAD!
-      print("ERROR DETALLADO: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error real: $e'), // Te mostrará si es "Permission Denied" o "User not found"
-            backgroundColor: const Color(0xFFA30000),
-            duration: const Duration(seconds: 5), // Lo dejamos más tiempo para que puedas leerlo
-          )
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Error checking credentials' : 'Error en credenciales'), backgroundColor: const Color(0xFFA30000)));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _mostrarDialogoRecuperacion() {
-    final emailController = TextEditingController();
-    showDialog(
+  // BOTTOM SHEET DE AJUSTES EN LOGIN (SIN EL BOTÓN DE "MÁS OPCIONES")
+  void _mostrarDropdownAjustes() {
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1111),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFA30000), width: 1),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Recuperar contraseña', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                const Text('Introduce el correo electrónico vinculado a tu cuenta.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 24),
-                _buildRingInput(emailController, 'Correo Electrónico', false),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-                      onPressed: () async {
-                        if (emailController.text.contains('@')) {
-                          try {
-                            await FirebaseAuth.instance.sendPasswordResetEmail(email: emailController.text.trim());
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enlace enviado. Revisa tu bandeja.'), backgroundColor: Colors.green));
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al enviar. Comprueba el correo.'), backgroundColor: Color(0xFFA30000)));
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Introduce un correo válido.'), backgroundColor: Color(0xFFA30000)));
-                        }
-                      },
-                      child: const Text('ENVIAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    )
-                  ],
-                )
-              ],
-            ),
-          ),
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: TheRingPrivateApp.themeNotifier,
+          builder: (context, currentTheme, _) {
+            return ValueListenableBuilder<bool>(
+              valueListenable: TheRingPrivateApp.isEnglishNotifier,
+              builder: (context, isEng, _) {
+                final bgColor = currentTheme == ThemeMode.dark ? const Color(0xFF1E1E1E) : Colors.white;
+                final textColor = currentTheme == ThemeMode.dark ? Colors.white : Colors.black87;
+
+                return Container(
+                  decoration: BoxDecoration(color: bgColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
+                  padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // SECCIÓN IDIOMA
+                      Row(
+                        children: [
+                          const Icon(Icons.language, color: Color(0xFFA30000)),
+                          const SizedBox(width: 8),
+                          Text(isEng ? 'Language' : 'Idioma', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          _buildOption(isEng, '🇪🇸 ESPAÑOL', !isEng, () => TheRingPrivateApp.isEnglishNotifier.value = false),
+                          _buildOption(isEng, '🇬🇧 ENGLISH', isEng, () => TheRingPrivateApp.isEnglishNotifier.value = true),
+                        ],
+                      ),
+                      const Divider(height: 32),
+                      // SECCIÓN APARIENCIA
+                      Row(
+                        children: [
+                          const Icon(Icons.palette, color: Color(0xFFA30000)),
+                          const SizedBox(width: 8),
+                          Text(isEng ? 'Appearance' : 'Apariencia', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          _buildOption(isEng, isEng ? 'Light' : 'Claro', currentTheme == ThemeMode.light, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light),
+                          _buildOption(isEng, isEng ? 'Dark' : 'Oscuro', currentTheme == ThemeMode.dark, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark),
+                        ],
+                      ),
+                      const SizedBox(height: 20), // Pequeño espacio al final
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: AnimatedContainer(
-        duration: const Duration(seconds: 4),
-        constraints: const BoxConstraints.expand(),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: _auroraColors[_colorIndex]),
-        ),
-        child: SafeArea(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              const Positioned(bottom: 32, child: Text('? FAQ', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.topCenter,
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.only(top: 50),
-                        padding: const EdgeInsets.fromLTRB(24, 70, 24, 32),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1111),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 6))],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildRingInput(_userController, 'DNI / Correo', false),
-                            const SizedBox(height: 16),
-                            _buildRingInput(_passwordController, 'Contraseña', true),
-                            const SizedBox(height: 12),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: GestureDetector(
-                                onTap: _mostrarDialogoRecuperacion,
-                                child: const Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('Olvidé la contraseña', style: TextStyle(color: Color(0xFFCCCCCC), fontWeight: FontWeight.bold))),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 60,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-                                onPressed: _isLoading ? null : _signIn,
-                                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('INICIAR SESIÓN', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            GestureDetector(
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
-                              child: const Padding(padding: EdgeInsets.all(8.0), child: Text('¿No tienes cuenta? Regístrate', style: TextStyle(color: Color(0xFFCCCCCC), fontSize: 15, fontWeight: FontWeight.bold))),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        top: 0,
-                        child: Container(
-                          width: 160, height: 100,
-                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFA30000), width: 2)),
-                          child: const Center(child: Icon(Icons.whatshot, color: Color(0xFFA30000), size: 50)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+  Widget _buildOption(bool isEng, String label, bool isActive, VoidCallback onTap) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Center(child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? const Color(0xFFA30000) : Colors.grey))),
         ),
       ),
     );
   }
 
-  Widget _buildRingInput(TextEditingController controller, String hint, bool isPassword) {
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+        valueListenable: TheRingPrivateApp.themeNotifier,
+        builder: (context, currentTheme, _) {
+          return ValueListenableBuilder<bool>(
+              valueListenable: TheRingPrivateApp.isEnglishNotifier,
+              builder: (context, isEng, _) {
+                final isDarkMode = currentTheme == ThemeMode.dark;
+                final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+                final textColor = isDarkMode ? Colors.white : Colors.black87;
+
+                return Scaffold(
+                  backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+                  body: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 120),
+                          Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.topCenter,
+                            children: [
+                              Card(
+                                margin: const EdgeInsets.only(top: 50, bottom: 40),
+                                elevation: 12, color: cardBgColor,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(24, 70, 24, 32),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      _buildInput(_userController, isEng ? 'User or DNI' : 'Usuario o DNI', false, textColor),
+                                      const SizedBox(height: 8),
+                                      _buildInput(_passwordController, isEng ? 'Password' : 'Contraseña', true, textColor),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), minimumSize: const Size(double.infinity, 60), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+                                        onPressed: _isLoading ? null : () => _signIn(isEng),
+                                        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(isEng ? 'LOGIN' : 'INICIAR SESIÓN', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Center(child: GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())), child: Text(isEng ? 'No account? Register' : '¿No tienes cuenta? Regístrate', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)))),
+                                      const SizedBox(height: 20),
+                                      InkWell(
+                                        onTap: _mostrarDropdownAjustes,
+                                        child: Padding(padding: const EdgeInsets.all(8.0), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.language, color: Colors.grey, size: 20), const SizedBox(width: 8), Text(isEng ? '🇬🇧 EN / THEME' : '🇪🇸 ES / TEMA', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))])),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Positioned(top: 0, child: Image.asset('assets/images/logo.png', width: 160, height: 100, errorBuilder: (context, error, stackTrace) => Container(width: 160, height: 100, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.image, color: Colors.white)))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+          );
+        }
+    );
+  }
+
+  Widget _buildInput(TextEditingController controller, String hint, bool isPassword, Color textColor) {
     return TextField(
       controller: controller,
-      obscureText: isPassword,
-      style: const TextStyle(color: Colors.white),
+      obscureText: isPassword ? !_isPasswordVisible : false,
+      style: TextStyle(color: textColor),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFAAAAAA)),
         filled: true,
-        fillColor: const Color(0xFF2A1C1C),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        fillColor: Theme.of(context).scaffoldBackgroundColor,
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFA30000))),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
+        suffixIcon: isPassword ? IconButton(icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey), onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)) : null,
       ),
     );
   }

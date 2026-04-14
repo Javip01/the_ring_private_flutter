@@ -14,35 +14,52 @@ void main() async {
 class TheRingPrivateApp extends StatelessWidget {
   const TheRingPrivateApp({super.key});
 
+  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+  static final ValueNotifier<bool> isEnglishNotifier = ValueNotifier(false);
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'The Ring Private',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black, // Color base
-        primaryColor: const Color(0xFFA30000), // Rojo The Ring exacto
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFA30000),
-          secondary: Color(0xFF1A1A1A),
-          surface: Color(0xFF1A1111),
-        ),
-        useMaterial3: true,
-      ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFA30000))));
-          }
-          if (snapshot.hasData) {
-            return const HomeScreen();
-          } else {
-            return const LoginScreen();
-          }
-        },
-      ),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (_, ThemeMode currentMode, __) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: isEnglishNotifier,
+          builder: (_, bool isEnglish, __) {
+            return MaterialApp(
+              title: 'The Ring Private',
+              debugShowCheckedModeBanner: false,
+              themeMode: currentMode,
+              theme: ThemeData(
+                brightness: Brightness.light,
+                scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+                cardColor: Colors.white,
+                primaryColor: const Color(0xFFA30000),
+                useMaterial3: true,
+              ),
+              darkTheme: ThemeData(
+                brightness: Brightness.dark,
+                scaffoldBackgroundColor: const Color(0xFF121212),
+                cardColor: const Color(0xFF1E1E1E),
+                primaryColor: const Color(0xFFA30000),
+                useMaterial3: true,
+              ),
+              home: StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFA30000))));
+                  }
+                  if (snapshot.hasData) {
+                    return const HomeScreen();
+                  } else {
+                    return const LoginScreen();
+                  }
+                },
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
