@@ -123,3 +123,58 @@ Ejecuta la aplicación:
 Bash
 flutter run
 (Nota: Para experimentar la fluidez real de las animaciones personalizadas del botón flotante y el menú a 60 FPS, se recomienda compilar usando flutter run --release).
+
+
+HAY QUE ORGANIZAR AMBAS PARTES
+
+
+# 📖 Documentación del Proyecto: The Ring Private
+
+## 1. ¿Qué es la app y de qué va?
+**The Ring Private** es una aplicación móvil exclusiva diseñada para la gestión integral de acceso, comunicación y experiencia de usuario de un club privado. Su objetivo principal es digitalizar y asegurar el ecosistema del club, sustituyendo los carnets físicos tradicionales por un sistema de acceso dinámico y cifrado, al mismo tiempo que centraliza las notificaciones y el soporte en tiempo real para los usuarios.
+
+## 2. ¿Para quién está dirigida?
+La plataforma está diseñada para dos perfiles principales:
+* **Socios / Miembros VIP:** Usuarios que han adquirido una membresía en el club. Utilizan la app para identificarse en puerta, leer las normativas, recibir notificaciones de eventos y contactar con el staff.
+* **Staff y Personal de Seguridad:** Aunque la app principal es para el socio, el personal de seguridad interactúa con ella validando visual o digitalmente los códigos de acceso generados.
+
+## 3. ¿Quién la desarrolló?
+El diseño, la arquitectura de software y el desarrollo completo de la aplicación han sido llevados a cabo por **Mauricio Javier Pérez Gavilanes**.
+
+## 4. ¿Cómo funciona? (Resumen de Flujo)
+El funcionamiento de la app es directo y seguro:
+1.  **Autenticación:** Al abrir la aplicación, el usuario debe identificarse mediante DNI o Correo y contraseña contra una base de datos segura.
+2.  **Dashboard:** Una vez dentro, la pantalla principal (**Home**) actúa como un panel de control donde el usuario visualiza notificaciones y accede a su perfil.
+3.  **Acciones Críticas:** Desde la Home, el usuario puede realizar las dos funciones principales: generar su pase de acceso inmediato o solicitar soporte técnico mediante el botón flotante.
+
+## 5. Funciones Relevantes ("Funciones Tochas")
+El software ha sido desarrollado utilizando **Flutter (Dart)** para el frontend móvil y **Firebase (Google)** para la autenticación y base de datos en la nube.
+
+* **Sistema de Acceso Seguro Dinámico (QR):** Para evitar suplantaciones de identidad y el uso de capturas de pantalla, la app genera un código QR único vinculado al ID del usuario. Este código cuenta con un temporizador de seguridad que se destruye y **regenera automáticamente cada 60 segundos**.
+* **Motor de Físicas Personalizado (Aura Repelente):** El botón de soporte (WhatsApp) es un elemento flotante que el usuario puede arrastrar libremente por toda la pantalla (optimizado mediante GPU). Incluye un algoritmo matemático (`math.atan2`) que detecta la cercanía con el botón principal del QR y lo **repele magnéticamente**, garantizando que los elementos vitales de la interfaz nunca se solapen.
+* **UI Reactiva en Tiempo Real (Estado Global):** Mediante el uso de `ValueNotifier`, la aplicación permite cambiar el idioma (Inglés/Español) y el tema de apariencia (Modo Claro/Oscuro) de forma instantánea. No requiere pantallas de carga ni reiniciar la app para aplicar los cambios.
+* **Autenticación Inteligente:** El sistema de Login detecta automáticamente si el usuario ingresa un correo electrónico o un DNI, mapeando el DNI a su registro interno correspondiente en Firebase de forma transparente para el usuario.
+
+## 6. Casos de Uso (Estructura para Diagramas)
+
+### Caso de Uso 1: Validación en Puerta (Control de Acceso)
+* **Actor:** Socio VIP.
+* **Flujo:** El socio llega al club → Abre la app → Pulsa el botón central (QR) → El sistema genera un token temporal → Se muestra el código con cuenta atrás de 60s → El personal de seguridad valida el código → Acceso concedido.
+
+### Caso de Uso 2: Asistencia Inmediata (Soporte)
+* **Actor:** Socio VIP.
+* **Flujo:** El socio requiere asistencia → Localiza el icono flotante de WhatsApp → Lo pulsa → El sistema inyecta un mensaje predefinido → Se abre la app nativa de WhatsApp redirigiendo al contacto oficial de la empresa.
+
+### Caso de Uso 3: Autenticación de Usuario (Login)
+* **Actor:** Socio.
+* **Flujo:** El usuario introduce credenciales (DNI/Password) → La app cifra los datos → Firebase valida el token → El sistema carga el perfil y redirige a la Home.
+
+## 7. Versiones y Especificaciones de Hardware/Software
+Para un rendimiento óptimo de las animaciones y la conexión en tiempo real:
+
+* **Versión Actual:** `1.0.0+1`
+* **Requisitos Android:** Android 6.0 (API 23) o superior. Recomendado dispositivos de 64 bits (ARM64).
+* **Requisitos iOS:** iOS 12.0 o superior (iPhone 6s en adelante).
+* **Hardware Común:** * Conexión a Internet activa (4G/5G/Wi-Fi).
+   * Pantalla táctil capacitiva.
+   * Cámara funcional (para futuras implementaciones de foto de perfil).
