@@ -14,7 +14,9 @@ void main() async {
 class TheRingPrivateApp extends StatelessWidget {
   const TheRingPrivateApp({super.key});
 
-  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(
+    ThemeMode.light,
+  );
   static final ValueNotifier<bool> isEnglishNotifier = ValueNotifier(false);
 
   @override
@@ -47,7 +49,13 @@ class TheRingPrivateApp extends StatelessWidget {
                 stream: FirebaseAuth.instance.authStateChanges(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFA30000))));
+                    return const Scaffold(
+                      body: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFA30000),
+                        ),
+                      ),
+                    );
                   }
                   if (snapshot.hasData) {
                     return const HomeScreen();
