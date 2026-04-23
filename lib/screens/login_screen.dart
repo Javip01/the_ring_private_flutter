@@ -37,7 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- POP-UP DE IDIOMA ---
   void _mostrarDialogoIdioma() {
     showDialog(
       context: context,
@@ -45,48 +44,71 @@ class _LoginScreenState extends State<LoginScreen> {
         return ValueListenableBuilder<ThemeMode>(
           valueListenable: TheRingPrivateApp.themeNotifier,
           builder: (context, currentTheme, _) {
-            final isDark = currentTheme == ThemeMode.dark;
-            final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-            final textColor = isDark ? Colors.white : Colors.black87;
+            return ValueListenableBuilder<bool>(
+              valueListenable: TheRingPrivateApp.isEnglishNotifier,
+              builder: (context, isEng, _) {
+                final isDark = currentTheme == ThemeMode.dark;
+                final bgColor = isDark ? const Color(0xFF161616) : Colors.white;
+                final textColor = isDark ? Colors.white : Colors.black87;
 
-            return Dialog(
-              backgroundColor: bgColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
+                return Dialog(
+                  backgroundColor: bgColor,
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.translate, color: Color(0xFFA30000)),
-                        const SizedBox(width: 8),
-                        Text('IDIOMA / LANGUAGE', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.translate, color: Color(0xFFA30000)),
+                                const SizedBox(width: 8),
+                                Text('IDIOMA / LANGUAGE', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                              ],
+                            ),
+                            IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: () => Navigator.pop(context))
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => TheRingPrivateApp.isEnglishNotifier.value = false,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: !isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+                                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                                  ),
+                                  child: Center(child: Text('🇪🇸 ES', style: TextStyle(color: !isEng ? const Color(0xFFA30000) : textColor, fontWeight: FontWeight.bold, fontSize: 16))),
+                                ),
+                              ),
+                            ),
+                            Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => TheRingPrivateApp.isEnglishNotifier.value = true,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+                                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                                  ),
+                                  child: Center(child: Text('🇬🇧 EN', style: TextStyle(color: isEng ? const Color(0xFFA30000) : textColor, fontWeight: FontWeight.bold, fontSize: 16))),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Divider(color: isDark ? Colors.grey[800] : Colors.grey[200]),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () { TheRingPrivateApp.isEnglishNotifier.value = false; Navigator.pop(context); },
-                            child: Text('🇪🇸 ES', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                          ),
-                        ),
-                        Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () { TheRingPrivateApp.isEnglishNotifier.value = true; Navigator.pop(context); },
-                            child: Text('🇬🇧 EN', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                          ),
-                        ),
-                      ],
-                    )
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -94,66 +116,63 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- POP-UP DEL MANUAL ---
   void _mostrarManual() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF161616) : const Color(0xFFF9F9F9);
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     showDialog(
       context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final bgColor = isDark ? const Color(0xFF161616) : const Color(0xFFF9F9F9);
-        final textColor = isDark ? Colors.white : Colors.black87;
-
-        return Dialog(
-          backgroundColor: bgColor,
-          insetPadding: const EdgeInsets.all(20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        isEng ? 'User Manual - The Ring Private' : 'Manual de Usuario - The Ring Private',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
-                      ),
+      builder: (context) => Dialog(
+        backgroundColor: bgColor,
+        insetPadding: const EdgeInsets.all(20),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      isEng ? 'User Manual - The Ring Private' : 'Manual de Usuario - The Ring Private',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: Colors.grey[500]),
-                      onPressed: () => Navigator.pop(context),
-                    )
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: isEng ? _buildManualTextEN(textColor) : _buildManualTextES(textColor),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA30000),
-                    minimumSize: const Size(double.infinity, 55),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 4,
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.grey[500]),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                ],
               ),
-            ],
-          ),
-        );
-      },
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: isEng ? _buildManualTextEN(textColor) : _buildManualTextES(textColor),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA30000),
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                  elevation: 4,
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -267,7 +286,6 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (context, isEng, _) {
                 final isDarkMode = currentTheme == ThemeMode.dark;
 
-                // NEGROS PUROS PARA EL MODO OSCURO (Sin tonos violáceos)
                 final scaffoldBgColor = isDarkMode ? const Color(0xFF000000) : const Color(0xFFF0F0F0);
                 final cardBgColor = isDarkMode ? const Color(0xFF161616) : Colors.white;
                 final textColor = isDarkMode ? Colors.white : Colors.black87;
@@ -297,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   shadowColor: Colors.black26,
                                   color: cardBgColor,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
+                                    borderRadius: const BorderRadius.all(Radius.circular(24)),
                                     side: isDarkMode ? const BorderSide(color: Color(0xFF2A2A2A)) : BorderSide.none,
                                   ),
                                   child: Padding(
@@ -312,7 +330,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         Align(
                                           alignment: Alignment.centerRight,
                                           child: TextButton(
-                                            onPressed: () {}, // Lógica recuperar contraseña
+                                            onPressed: () {},
                                             child: Text(isEng ? 'Forgot your password?' : '¿Olvidaste tu contraseña?', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
                                           ),
                                         ),
@@ -321,7 +339,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           style: ElevatedButton.styleFrom(
                                               backgroundColor: const Color(0xFFA30000),
                                               minimumSize: const Size(double.infinity, 55),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30))),
                                               elevation: 4,
                                               shadowColor: const Color(0xFFA30000).withOpacity(0.5)
                                           ),
@@ -346,7 +364,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             const SizedBox(width: 40),
                                             InkWell(
                                               onTap: _mostrarManual,
-                                              child: Row(children: [const Icon(Icons.menu_book, size: 18), const SizedBox(width: 6), Text('Manual', style: const TextStyle(fontWeight: FontWeight.bold))]),
+                                              child: const Row(children: [Icon(Icons.menu_book, size: 18), SizedBox(width: 6), Text('Manual', style: TextStyle(fontWeight: FontWeight.bold))]),
                                             ),
                                           ],
                                         )
@@ -354,7 +372,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                 ),
-                                // LOGO SUPERPUESTO (ESTILO CAPTURA)
                                 Positioned(
                                     top: -10,
                                     child: Image.asset(
@@ -390,8 +407,8 @@ class _LoginScreenState extends State<LoginScreen> {
         filled: true,
         fillColor: fillColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: borderColor)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
+        enabledBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: borderColor)),
+        focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: Color(0xFFA30000), width: 2)),
         suffixIcon: isPassword ? IconButton(icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey), onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)) : null,
       ),
     );

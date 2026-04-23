@@ -71,6 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // --- POPUP IDIOMA ---
   void _mostrarDialogoIdioma() {
     showDialog(
       context: context,
@@ -110,13 +111,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Expanded(
                                 child: InkWell(
-                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = false, // Sin pop
+                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = false,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                     decoration: BoxDecoration(
                                       color: !isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
+                                    // CORRECCIÓN TEXTO VISIBLE
                                     child: Center(child: Text('🇪🇸 ES', style: TextStyle(color: !isEng ? const Color(0xFFA30000) : (isDark ? Colors.white : Colors.black), fontSize: 16, fontWeight: FontWeight.bold))),
                                   ),
                                 ),
@@ -124,13 +126,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
                               Expanded(
                                 child: InkWell(
-                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = true, // Sin pop
+                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = true,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                     decoration: BoxDecoration(
                                       color: isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
+                                    // CORRECCIÓN TEXTO VISIBLE
                                     child: Center(child: Text('🇬🇧 EN', style: TextStyle(color: isEng ? const Color(0xFFA30000) : (isDark ? Colors.white : Colors.black), fontSize: 16, fontWeight: FontWeight.bold))),
                                   ),
                                 ),
@@ -148,6 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // --- POPUP APARIENCIA (BUG COLORES CORREGIDO) ---
   void _mostrarDialogoApariencia() {
     showDialog(
       context: context,
@@ -187,28 +191,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Expanded(
                                 child: InkWell(
-                                  onTap: () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light, // Sin pop
+                                  onTap: () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                     decoration: BoxDecoration(
                                       color: !isDark ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Center(child: Text(isEng ? 'Light' : 'Claro', style: TextStyle(color: !isDark ? const Color(0xFFA30000) : Colors.black, fontSize: 16, fontWeight: FontWeight.bold))),
+                                    // CORRECCIÓN DE BUG DE COLOR (AHORA SIEMPRE VISIBLE)
+                                    child: Center(child: Text(isEng ? 'Light' : 'Claro', style: TextStyle(color: !isDark ? const Color(0xFFA30000) : Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
                                   ),
                                 ),
                               ),
                               Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
                               Expanded(
                                 child: InkWell(
-                                  onTap: () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark, // Sin pop
+                                  onTap: () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                     decoration: BoxDecoration(
                                       color: isDark ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Center(child: Text(isEng ? 'Dark' : 'Oscuro', style: TextStyle(color: isDark ? const Color(0xFFA30000) : Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+                                    // CORRECCIÓN DE BUG DE COLOR (AHORA SIEMPRE VISIBLE)
+                                    child: Center(child: Text(isEng ? 'Dark' : 'Oscuro', style: TextStyle(color: isDark ? const Color(0xFFA30000) : Colors.black, fontSize: 16, fontWeight: FontWeight.bold))),
                                   ),
                                 ),
                               ),
@@ -327,7 +333,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- MANUAL DE USUARIO ---
   void _mostrarManual() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
@@ -505,7 +510,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
-  // --- TEXTO EXACTO DEL AVISO LEGAL (NUEVO Y LITERAL) ---
   void _abrirAvisoLegal(bool isEng) {
     String titulo = isEng ? 'Legal Notice' : 'Aviso legal';
     String contenido = isEng
@@ -559,16 +563,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             width: double.infinity,
                             margin: const EdgeInsets.only(bottom: 24),
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [Color(0xFFA30000), Color(0xFF4A0000)],
                               ),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(isDark ? 0.5 : 0.2), blurRadius: 10, offset: const Offset(0, 4))
-                              ],
+                              borderRadius: BorderRadius.all(Radius.circular(24)),
                             ),
                             child: Column(
                               children: [
@@ -593,7 +594,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Card(
                             elevation: isDark ? 0 : 2,
                             color: cardBgColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                             margin: const EdgeInsets.only(bottom: 24),
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -611,7 +612,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Card(
                             elevation: isDark ? 0 : 2,
                             color: cardBgColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                             margin: const EdgeInsets.only(bottom: 24),
                             child: Column(
                               children: [
@@ -628,7 +629,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Card(
                             elevation: isDark ? 0 : 2,
                             color: cardBgColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                             margin: const EdgeInsets.only(bottom: 24),
                             child: Column(
                               children: [
@@ -649,7 +650,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Card(
                             elevation: isDark ? 0 : 2,
                             color: cardBgColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                             margin: const EdgeInsets.only(bottom: 40),
                             child: Column(
                               children: [
@@ -657,7 +658,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
                                 _buildRow(Icons.close, isEng ? 'DELETE ACCOUNT' : 'ELIMINAR CUENTA', const Color(0xFFFF4C4C), const Color(0xFFFF4C4C), isDestructive: true, onTap: _mostrarDialogoEliminar),
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
-                                // BOTÓN DE MANUAL DE USUARIO AÑADIDO
                                 _buildRow(Icons.menu_book, isEng ? 'User Manual' : 'Manual de usuario', iconColor, textColor, onTap: () => _mostrarManual()),
                               ],
                             ),

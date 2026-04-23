@@ -92,7 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               shadowColor: Colors.black26,
                               color: cardBgColor,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: const BorderRadius.all(Radius.circular(24)),
                                 side: isDarkMode ? const BorderSide(color: Color(0xFF2A2A2A)) : BorderSide.none,
                               ),
                               child: Padding(
@@ -135,7 +135,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       child: ElevatedButton(
                                         style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(0xFFA30000),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30))),
                                             elevation: 4,
                                             shadowColor: const Color(0xFFA30000).withOpacity(0.5)
                                         ),
@@ -185,8 +185,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         filled: true,
         fillColor: fillColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: borderColor)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
+        enabledBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: borderColor)),
+        focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
         suffixIcon: isPassword ? IconButton(icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey), onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)) : null,
       ),
     );
