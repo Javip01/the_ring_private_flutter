@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Timer? _qrTimer;
 
   final GlobalKey _qrButtonKey = GlobalKey();
-  final double _qrRadius = 35.0; // Un poco más grande como en la captura
+  final double _qrRadius = 35.0;
 
   final ValueNotifier<Offset?> _waPositionNotifier = ValueNotifier(null);
   final double _waDiameter = 60.0;
@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
+  // --- WIDGET DEL MENÚ PRE-CARGADO (AHORA CON "X" Y MANTIENE ESTADO) ---
   Widget _buildMenuContent() {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: TheRingPrivateApp.themeNotifier,
@@ -100,6 +101,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // NUEVA CABECERA DEL MENÚ CON LA 'X'
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(isEng ? 'QUICK MENU' : 'MENÚ RÁPIDO', style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.bold, fontSize: 12)),
+                          InkWell(
+                            onTap: _toggleMenu,
+                            child: Icon(Icons.close, color: Colors.grey[500], size: 20),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       Row(children: [
                         const Icon(Icons.language, color: Color(0xFFA30000), size: 20),
                         const SizedBox(width: 8),
@@ -174,6 +187,108 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // --- POP-UP DE NORMAS (CLAVADO A TUS CAPTURAS CON DISEÑO UNIFICADO) ---
+  void _mostrarNormas(bool isEng, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF9F9F9),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              top: 24, left: 24, right: 24
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: Text(isEng ? 'RULES' : 'NORMAS', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 22, fontWeight: FontWeight.bold))),
+                  IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: () => Navigator.pop(context))
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(isEng ? 'RULES: THE RING PRIVATE' : 'NORMAS: THE RING PRIVATE', style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.65,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          isEng
+                              ? 'You agree to comply with these rules. For the benefit of everyone, be advised that any transgression of the following rules will be considered a VERY SERIOUS offense and will be grounds for immediate expulsion.'
+                              : 'Te comprometes a cumplir estas normas. En beneficio de todos, se advierte que cualquier transgresión de las siguientes reglas se considerará una falta MUY GRAVE y será motivo de expulsión inmediata.',
+                          style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 15, height: 1.5)
+                      ),
+                      const SizedBox(height: 24),
+                      Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 1),
+                      const SizedBox(height: 12),
+                      Text(isEng ? 'LIST OF RULES' : 'LISTADO DE REGLAS', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      const SizedBox(height: 12),
+                      Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 1),
+                      const SizedBox(height: 16),
+
+                      _buildRuleItem(isEng ? 'RESPECT: Our main rule.' : 'RESPETO: Nuestra norma principal.', isDark),
+                      _buildRuleItem(isEng ? 'GAMES: You cannot join a game started by others if they do not want you to.' : 'JUEGOS: No puedes formar parte de un juego iniciado por otros si estos no quieren.', isDark),
+                      _buildRuleItem(isEng ? 'ATTITUDE: Disrespectful behavior towards others is not allowed.' : 'ACTITUD: No está permitida ninguna actitud irrespetuosa hacia los demás.', isDark),
+                      _buildRuleItem(isEng ? 'DEVICES: The use of mobile phones, video, or photo cameras is not allowed.' : 'DISPOSITIVOS: No está permitido el uso de teléfonos móviles, cámaras de filmación o fotográficas.', isDark),
+                      _buildRuleItem(isEng ? 'PROHIBITED PRACTICES: Scat, blood, or extreme pain practices are not allowed.' : 'PRÁCTICAS PROHIBIDAS: No está permitida la práctica del scat, sangre o dolor extremo.', isDark),
+                      _buildRuleItem(isEng ? 'SUBSTANCES: The sale or consumption of any type of drugs or narcotics is not allowed.' : 'SUSTANCIAS: No está permitida la venta o consumo de cualquier tipo de drogas o estupefacientes.', isDark),
+
+                      const SizedBox(height: 24),
+                      Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 1),
+                      const SizedBox(height: 12),
+                      Text(isEng ? 'ADDITIONAL REMINDERS' : 'RECORDATORIOS ADICIONALES', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      const SizedBox(height: 12),
+                      Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 1),
+                      const SizedBox(height: 16),
+
+                      _buildRuleItem(isEng ? 'VOLUNTARINESS: You are not obliged to do anything you do not want to.' : 'VOLUNTARIEDAD: No estás obligado a hacer nada que no desees.', isDark),
+                      _buildRuleItem(isEng ? 'FACILITIES: Please leave them as you would like to find them.' : 'INSTALACIONES: Rogamos mantenerlas como desearías encontrarlas.', isDark),
+                      _buildRuleItem(isEng ? 'HEALTH: The club strongly recommends safe sex (free condoms available).' : 'SALUD: El club recomienda encarecidamente el sexo seguro (preservativos gratuitos disponibles).', isDark),
+                      _buildRuleItem(isEng ? 'HYGIENE: Cleaning and hygiene supplies are available for your use.' : 'HIGIENE: Existen elementos de limpieza e higiene para su uso.', isDark),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA30000),
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRuleItem(String text, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('• ', style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 16, fontWeight: FontWeight.bold)),
+          Expanded(child: Text(text, style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 15, height: 1.4))),
+        ],
+      ),
+    );
+  }
+
+  // --- POP-UP DEL QR ---
   void _mostrarBottomSheetQR() {
     _generarNuevoQR();
     showModalBottomSheet(
@@ -234,9 +349,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     final size = MediaQuery.of(context).size;
 
+    // CÁLCULO DE PADDING AUTOMÁTICO (ISLA DINÁMICA/NOTCH)
+    final double topPadding = MediaQuery.of(context).padding.top;
+
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // COLORES EXACTOS CAPTURA HOME (NEGRO PURO, SIN VIOLETA)
     final scaffoldBgColor = isDark ? const Color(0xFF000000) : const Color(0xFFF5F5F5);
     final cardBgColor = isDark ? const Color(0xFF161616) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
@@ -255,9 +372,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // HEADER THE RING
+                  // HEADER THE RING (Adaptativo al Notch gracias al topPadding)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 60, 16, 16),
+                    padding: EdgeInsets.fromLTRB(20, topPadding + 20, 16, 16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -267,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
 
-                  // CONTENEDOR LOGO ESTILO CAPTURA (GRADIENTE SUAVE EN CLARO, GRIS SÓLIDO EN OSCURO)
+                  // CONTENEDOR LOGO
                   Container(
                     height: 220,
                     width: double.infinity,
@@ -316,13 +433,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                   const SizedBox(height: 16),
 
-                  // BOTONES PERFIL Y NORMAS (CUADRADOS)
+                  // BOTONES PERFIL Y NORMAS
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
                         Expanded(child: _buildHomeSquareButton(isEng ? 'PROFILE' : 'PERFIL', Icons.person, cardBgColor, textColor, isDark, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())))),
-                        Expanded(child: _buildHomeSquareButton(isEng ? 'RULES' : 'NORMAS', Icons.assignment, cardBgColor, textColor, isDark, () {})),
+                        Expanded(child: _buildHomeSquareButton(isEng ? 'RULES' : 'NORMAS', Icons.assignment, cardBgColor, textColor, isDark, () => _mostrarNormas(isEng, isDark))),
                       ],
                     ),
                   ),
@@ -424,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
 
           Positioned(
-            top: 90,
+            top: topPadding + 65, // EL MENÚ TAMBIÉN RESPETA EL NOTCH AHORA
             right: 16,
             child: IgnorePointer(
               ignoring: !_isMenuOpen,
@@ -454,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: SizedBox(
-          height: 140, // Más cuadrado como en la captura
+          height: 140,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
