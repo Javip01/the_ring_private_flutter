@@ -16,22 +16,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  // --- VARIABLES DEL QR ---
   String _currentQrData = "CARGANDO";
   int _secondsLeft = 60;
   Timer? _qrTimer;
 
-  // --- VARIABLES DEL AURA REPELENTE ---
   final GlobalKey _qrButtonKey = GlobalKey();
-  final double _qrRadius = 28.0;
+  final double _qrRadius = 35.0; // Un poco más grande como en la captura
 
-  // --- VARIABLES DEL BOTÓN DE WHATSAPP ---
   final ValueNotifier<Offset?> _waPositionNotifier = ValueNotifier(null);
   final double _waDiameter = 60.0;
   final double _repulsionAuraPadding = 30.0;
   Offset _dragOffset = Offset.zero;
 
-  // --- VARIABLES DEL MENÚ ANIMADO ---
   late AnimationController _menuController;
   late Animation<double> _menuAnimation;
   bool _isMenuOpen = false;
@@ -64,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  // --- ABRIR WHATSAPP ---
   void _abrirWhatsApp() async {
     const String telefono = "34123456789";
     final Uri url = Uri.parse("https://wa.me/$telefono?text=Hola, necesito asistencia.");
@@ -73,7 +68,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  // --- LÓGICA DEL MENÚ ---
   void _toggleMenu() {
     if (_isMenuOpen) {
       _menuController.reverse().then((_) => setState(() => _isMenuOpen = false));
@@ -83,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  // WIDGET DEL MENÚ PRE-CARGADO
   Widget _buildMenuContent() {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: TheRingPrivateApp.themeNotifier,
@@ -91,8 +84,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return ValueListenableBuilder<bool>(
           valueListenable: TheRingPrivateApp.isEnglishNotifier,
           builder: (context, isEng, _) {
-            final bgColor = currentTheme == ThemeMode.dark ? const Color(0xFF1E1E1E) : Colors.white;
-            final textColor = currentTheme == ThemeMode.dark ? Colors.white : Colors.black87;
+            final isDark = currentTheme == ThemeMode.dark;
+            final bgColor = isDark ? const Color(0xFF161616) : Colors.white;
+            final textColor = isDark ? Colors.white : Colors.black87;
 
             return Material(
               color: bgColor,
@@ -180,12 +174,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  // --- POP-UP DEL QR ---
   void _mostrarBottomSheetQR() {
     _generarNuevoQR();
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: const Color(0xFF161616),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
@@ -241,13 +234,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     final size = MediaQuery.of(context).size;
 
-    // LÓGICA DE LOGO DINÁMICO
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // COLORES EXACTOS CAPTURA HOME (NEGRO PURO, SIN VIOLETA)
+    final scaffoldBgColor = isDark ? const Color(0xFF000000) : const Color(0xFFF5F5F5);
+    final cardBgColor = isDark ? const Color(0xFF161616) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     final String logoPath = isDark
         ? 'lib/assets/logo_the_ring_transparente.png'
         : 'lib/assets/logo_the_ring_transparente_negro.png';
 
     return Scaffold(
+      backgroundColor: scaffoldBgColor,
       body: Stack(
         children: [
           Positioned.fill(
@@ -256,45 +255,74 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // HEADER THE RING
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 50, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(20, 60, 16, 16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('THE RING', style: TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 18)),
-                        IconButton(icon: const Icon(Icons.menu, color: rojoRing, size: 28), onPressed: _toggleMenu)
+                        const Text('THE RING', style: TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 20)),
+                        IconButton(icon: const Icon(Icons.menu, color: rojoRing, size: 30), onPressed: _toggleMenu)
                       ],
                     ),
                   ),
-                  
-                  // CONTENEDOR DE LOGO (REEMPLAZO)
+
+                  // CONTENEDOR LOGO ESTILO CAPTURA (GRADIENTE SUAVE EN CLARO, GRIS SÓLIDO EN OSCURO)
                   Container(
-                    height: 180, width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    height: 220,
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF161616) : null,
+                      gradient: isDark ? null : const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFFE8E8E8), Colors.white],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: isDark ? [] : [const BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                    ),
                     alignment: Alignment.center,
                     child: Image.asset(
-                      logoPath,
-                      height: 140,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_,__,___) => Icon(Icons.image, color: isDark ? Colors.white : Colors.black, size: 50)
+                        logoPath,
+                        height: 160,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_,__,___) => Icon(Icons.image, color: isDark ? Colors.white : Colors.black, size: 50)
                     ),
                   ),
 
+                  const SizedBox(height: 16),
+
+                  // SECCIÓN NOTIFICACIONES
                   Padding(
-                    padding: const EdgeInsets.only(left: 24, bottom: 4),
-                    child: Text(isEng ? 'NOTIFICATIONS' : 'NOTIFICACIONES', style: const TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    child: Text(isEng ? 'NOTIFICATIONS' : 'NOTIFICACIONES', style: const TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                   Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: Container(height: 100, alignment: Alignment.center, child: Text(isEng ? 'No notifications' : 'No tienes notificaciones', style: const TextStyle(color: Colors.grey))),
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    elevation: isDark ? 0 : 4,
+                    shadowColor: Colors.black26,
+                    color: cardBgColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Container(
+                        height: 110,
+                        alignment: Alignment.center,
+                        child: Text(
+                            isEng ? 'No pending notifications' : 'No tienes notificaciones pendientes',
+                            style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700], fontSize: 15)
+                        )
+                    ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // BOTONES PERFIL Y NORMAS (CUADRADOS)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
-                        Expanded(child: _buildHomeButton(isEng ? 'PROFILE' : 'PERFIL', Icons.person, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())))),
-                        Expanded(child: _buildHomeButton(isEng ? 'RULES' : 'NORMAS', Icons.gavel, () {})),
+                        Expanded(child: _buildHomeSquareButton(isEng ? 'PROFILE' : 'PERFIL', Icons.person, cardBgColor, textColor, isDark, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())))),
+                        Expanded(child: _buildHomeSquareButton(isEng ? 'RULES' : 'NORMAS', Icons.assignment, cardBgColor, textColor, isDark, () {})),
                       ],
                     ),
                   ),
@@ -303,18 +331,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
+          // BOTÓN QR CENTRAL ROJO
           Positioned(
-            bottom: 30,
+            bottom: 40,
             left: (size.width / 2) - _qrRadius,
-            child: FloatingActionButton(
-              key: _qrButtonKey,
-              heroTag: 'btn_qr_central',
-              backgroundColor: rojoRing,
-              onPressed: _mostrarBottomSheetQR,
-              child: const Icon(Icons.qr_code, color: Colors.white, size: 32),
+            child: SizedBox(
+              width: _qrRadius * 2,
+              height: _qrRadius * 2,
+              child: FloatingActionButton(
+                key: _qrButtonKey,
+                heroTag: 'btn_qr_central',
+                backgroundColor: rojoRing,
+                elevation: 8,
+                shape: const CircleBorder(),
+                onPressed: _mostrarBottomSheetQR,
+                child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 38),
+              ),
             ),
           ),
 
+          // BOTÓN WHATSAPP
           ValueListenableBuilder<Offset?>(
             valueListenable: _waPositionNotifier,
             builder: (context, position, child) {
@@ -377,6 +413,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
+          // MENÚ DESPLEGABLE OVERLAY
           if (_isMenuOpen)
             Positioned.fill(
               child: GestureDetector(
@@ -406,22 +443,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildHomeButton(String title, IconData icon, VoidCallback onTap) {
+  Widget _buildHomeSquareButton(String title, IconData icon, Color bgColor, Color textColor, bool isDark, VoidCallback onTap) {
     return Card(
       margin: const EdgeInsets.all(8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      color: bgColor,
+      elevation: isDark ? 0 : 4,
+      shadowColor: Colors.black26,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: SizedBox(
-          height: 110,
+          height: 140, // Más cuadrado como en la captura
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: Theme.of(context).iconTheme.color),
-              const SizedBox(height: 8),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Icon(icon, size: 45, color: textColor),
+              const SizedBox(height: 16),
+              Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 16)),
             ],
           ),
         ),
