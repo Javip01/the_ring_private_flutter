@@ -39,7 +39,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    // Animación directa y suave: Sin rebotes (easeOutCubic) y un poco más rápida (200ms)
     _menuController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
   }
@@ -67,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   // --- ABRIR WHATSAPP ---
   void _abrirWhatsApp() async {
-    const String telefono = "34123456789"; // CAMBIA ESTO POR EL NÚMERO DEL CLUB
+    const String telefono = "34123456789";
     final Uri url = Uri.parse("https://wa.me/$telefono?text=Hola, necesito asistencia.");
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No se pudo abrir WhatsApp")));
@@ -242,12 +241,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     final size = MediaQuery.of(context).size;
 
+    // LÓGICA DE LOGO DINÁMICO
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final String logoPath = isDark
+        ? 'lib/assets/logo_the_ring_transparente.png'
+        : 'lib/assets/logo_the_ring_transparente_negro.png';
+
     return Scaffold(
       body: Stack(
         children: [
-          // ==========================================
-          // CAPA 1: FONDO Y CONTENIDO
-          // ==========================================
           Positioned.fill(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 120),
@@ -264,12 +266,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ],
                     ),
                   ),
+                  
+                  // CONTENEDOR DE LOGO (REEMPLAZO)
                   Container(
                     height: 180, width: double.infinity,
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(24)),
-                    child: Center(child: Image.asset('assets/images/logo.png', height: 100, errorBuilder: (_,__,___) => const Icon(Icons.image, color: Colors.white, size: 50))),
+                    alignment: Alignment.center,
+                    child: Image.asset(
+                      logoPath,
+                      height: 140,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_,__,___) => Icon(Icons.image, color: isDark ? Colors.white : Colors.black, size: 50)
+                    ),
                   ),
+
                   Padding(
                     padding: const EdgeInsets.only(left: 24, bottom: 4),
                     child: Text(isEng ? 'NOTIFICATIONS' : 'NOTIFICACIONES', style: const TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 14)),
@@ -293,9 +303,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // ==========================================
-          // CAPA 2: BOTÓN DEL QR CENTRAL
-          // ==========================================
           Positioned(
             bottom: 30,
             left: (size.width / 2) - _qrRadius,
@@ -308,9 +315,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // ==========================================
-          // CAPA 3: BOTÓN DE WHATSAPP
-          // ==========================================
           ValueListenableBuilder<Offset?>(
             valueListenable: _waPositionNotifier,
             builder: (context, position, child) {
@@ -373,9 +377,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // ==========================================
-          // CAPA 4: MENÚ DESPLEGABLE SUPERIOR DERECHO
-          // ==========================================
           if (_isMenuOpen)
             Positioned.fill(
               child: GestureDetector(
@@ -394,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 opacity: _menuAnimation,
                 child: ScaleTransition(
                   scale: _menuAnimation,
-                  alignment: Alignment.topRight, // Emerge recto, sin rebote
+                  alignment: Alignment.topRight,
                   child: _buildMenuContent(),
                 ),
               ),

@@ -19,7 +19,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
   }
 
-  // --- POPUP: CAMBIAR CONTRASEÑA ---
   void _mostrarDialogoPassword() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     showDialog(
@@ -51,7 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000)),
-                      onPressed: () => Navigator.pop(context), // Lógica guardado aquí
+                      onPressed: () => Navigator.pop(context),
                       child: Text(isEng ? 'Update' : 'Actualizar', style: const TextStyle(color: Colors.white)),
                     ),
                   ),
@@ -64,7 +63,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- POPUP: ELIMINAR CUENTA ---
   void _mostrarDialogoEliminar() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     showDialog(
@@ -110,7 +108,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- BOTTOM SHEET: TEXTOS LEGALES ---
   void _mostrarBottomSheetLegal(String titulo, String contenido) {
     showModalBottomSheet(
       context: context,
@@ -179,7 +176,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  const Icon(Icons.sports_mma, size: 80, color: Colors.white54), // Guantes de boxeo
+                  // AQUÍ ESTÁN LOS GUANTES SUSTITUYENDO AL PUÑO
+                  Image.asset(
+                    'lib/assets/guantes.png',
+                    height: 80,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports_mma, size: 80, color: Colors.white54),
+                  ),
                 ],
               ),
             ),
@@ -208,14 +211,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildRow(Icons.lock, isEng ? 'Change Password' : 'Cambiar Contraseña', onTap: _mostrarDialogoPassword),
                   const Divider(height: 1, indent: 56, color: Color(0xFFEEEEEE)),
                   _buildRow(Icons.language, isEng ? 'Language (Switch to ES)' : 'Idioma (Cambiar a EN)', onTap: () {
-                    // FUNCIONALIDAD IDIOMA
                     setState(() {
                       TheRingPrivateApp.isEnglishNotifier.value = !isEng;
                     });
                   }),
                   const Divider(height: 1, indent: 56, color: Color(0xFFEEEEEE)),
                   _buildRow(isDark ? Icons.light_mode : Icons.dark_mode, isEng ? 'Appearance (Toggle)' : 'Apariencia (Modo Claro/Oscuro)', onTap: () {
-                    // FUNCIONALIDAD MODO OSCURO
                     setState(() {
                       TheRingPrivateApp.themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
                     });
@@ -232,7 +233,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 children: [
                   _buildRow(Icons.today, isEng ? 'Tariffs' : 'Tarifas', onTap: () {
-                    // FUNCIONALIDAD ABRIR TARIFAS
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const TarifasScreen()));
                   }),
                   const Divider(height: 1, indent: 56, color: Color(0xFFEEEEEE)),

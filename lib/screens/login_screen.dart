@@ -37,7 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // BOTTOM SHEET DE AJUSTES EN LOGIN (SIN EL BOTÓN DE "MÁS OPCIONES")
   void _mostrarDropdownAjustes() {
     showModalBottomSheet(
       context: context,
@@ -59,7 +58,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // SECCIÓN IDIOMA
                       Row(
                         children: [
                           const Icon(Icons.language, color: Color(0xFFA30000)),
@@ -75,7 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       const Divider(height: 32),
-                      // SECCIÓN APARIENCIA
                       Row(
                         children: [
                           const Icon(Icons.palette, color: Color(0xFFA30000)),
@@ -90,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           _buildOption(isEng, isEng ? 'Dark' : 'Oscuro', currentTheme == ThemeMode.dark, () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark),
                         ],
                       ),
-                      const SizedBox(height: 20), // Pequeño espacio al final
+                      const SizedBox(height: 20),
                     ],
                   ),
                 );
@@ -129,6 +126,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 final isDarkMode = currentTheme == ThemeMode.dark;
                 final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
                 final textColor = isDarkMode ? Colors.white : Colors.black87;
+                
+                // LÓGICA DE LOGO DINÁMICO
+                final String logoPath = isDarkMode
+                    ? 'lib/assets/logo_the_ring_transparente.png'
+                    : 'lib/assets/logo_the_ring_transparente_negro.png';
 
                 return Scaffold(
                   backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
@@ -171,7 +173,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                              Positioned(top: 0, child: Image.asset('assets/images/logo.png', width: 160, height: 100, errorBuilder: (context, error, stackTrace) => Container(width: 160, height: 100, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.image, color: Colors.white)))),
+                              // LOGO DINÁMICO EN SU SITIO ORIGINAL
+                              Positioned(
+                                top: 0,
+                                child: Image.asset(
+                                  logoPath,
+                                  width: 160,
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50)
+                                )
+                              ),
                             ],
                           ),
                         ],

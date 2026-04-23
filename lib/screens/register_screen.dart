@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart'; // <-- ¡Esta es la línea mágica que faltaba!
+import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
 
 class RegisterScreen extends StatefulWidget {
@@ -56,7 +56,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // El truco de Firebase: Si no hay correo, usamos el DNI
       String signupEmail = correo.isNotEmpty ? correo : '${dni.toLowerCase()}@thering.local';
 
       UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -64,10 +63,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: password,
       );
 
-      // Guardamos el nombre en el perfil base de Auth
       await cred.user?.updateDisplayName(nombre);
 
-      // CREAMOS EL MAPEO Y EL PERFIL EN LA BASE DE DATOS EN TIEMPO REAL
       await FirebaseDatabase.instance.ref("MapeoDNI").child(dni).set(signupEmail);
       await FirebaseDatabase.instance.ref("Usuarios").child(signupEmail.replaceAll('.', '_')).child("perfil").set({
         "nombreReal": nombre,
@@ -76,7 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       if (!mounted) return;
-      Navigator.pop(context); // Vuelve al inicio y el StreamBuilder nos meterá a la Home
+      Navigator.pop(context);
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al crear cuenta. Quizás el DNI o correo ya existen.'), backgroundColor: Color(0xFFA30000)));
@@ -87,6 +84,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // LÓGICA DE LOGO DINÁMICO
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final String logoPath = isDark
+        ? 'lib/assets/logo_the_ring_transparente.png'
+        : 'lib/assets/logo_the_ring_transparente_negro.png';
+
     return Scaffold(
       body: AnimatedContainer(
         duration: const Duration(seconds: 4),
@@ -118,12 +121,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Cabecera con flecha atrás
                         Row(
                           children: [
                             IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
                             const Expanded(child: Center(child: Text('Crea tu cuenta', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)))),
-                            const SizedBox(width: 48), // Equilibrar la flecha
+                            const SizedBox(width: 48),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -166,18 +168,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
 
-                  // Logo superpuesto
+                  // LOGO FLOTANTE SUSTITUYENDO AL ICONO
                   Positioned(
                     top: 0,
-                    child: Container(
+                    child: Image.asset(
+                      logoPath,
                       width: 160,
                       height: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFA30000), width: 2),
-                      ),
-                      child: const Center(child: Icon(Icons.whatshot, color: Color(0xFFA30000), size: 50)),
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50, color: Colors.white)
                     ),
                   ),
                 ],
