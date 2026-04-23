@@ -77,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  // --- WIDGET DEL MENÚ PRE-CARGADO (AHORA CON "X" Y MANTIENE ESTADO) ---
   Widget _buildMenuContent() {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: TheRingPrivateApp.themeNotifier,
@@ -101,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // NUEVA CABECERA DEL MENÚ CON LA 'X'
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -187,7 +185,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  // --- POP-UP DE NORMAS (CLAVADO A TUS CAPTURAS CON DISEÑO UNIFICADO) ---
   void _mostrarNormas(bool isEng, bool isDark) {
     showModalBottomSheet(
       context: context,
@@ -288,7 +285,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  // --- POP-UP DEL QR ---
   void _mostrarBottomSheetQR() {
     _generarNuevoQR();
     showModalBottomSheet(
@@ -349,7 +345,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     final size = MediaQuery.of(context).size;
 
-    // CÁLCULO DE PADDING AUTOMÁTICO (ISLA DINÁMICA/NOTCH)
     final double topPadding = MediaQuery.of(context).padding.top;
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -372,7 +367,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // HEADER THE RING (Adaptativo al Notch gracias al topPadding)
                   Padding(
                     padding: EdgeInsets.fromLTRB(20, topPadding + 20, 16, 16),
                     child: Row(
@@ -384,7 +378,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
 
-                  // CONTENEDOR LOGO
                   Container(
                     height: 220,
                     width: double.infinity,
@@ -410,7 +403,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                   const SizedBox(height: 16),
 
-                  // SECCIÓN NOTIFICACIONES
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Text(isEng ? 'NOTIFICATIONS' : 'NOTIFICACIONES', style: const TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 15)),
@@ -433,7 +425,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                   const SizedBox(height: 16),
 
-                  // BOTONES PERFIL Y NORMAS
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
@@ -448,7 +439,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // BOTÓN QR CENTRAL ROJO
           Positioned(
             bottom: 40,
             left: (size.width / 2) - _qrRadius,
@@ -467,7 +457,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // BOTÓN WHATSAPP
           ValueListenableBuilder<Offset?>(
             valueListenable: _waPositionNotifier,
             builder: (context, position, child) {
@@ -530,7 +519,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // MENÚ DESPLEGABLE OVERLAY
           if (_isMenuOpen)
             Positioned.fill(
               child: GestureDetector(
@@ -541,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
 
           Positioned(
-            top: topPadding + 65, // EL MENÚ TAMBIÉN RESPETA EL NOTCH AHORA
+            top: topPadding + 65,
             right: 16,
             child: IgnorePointer(
               ignoring: !_isMenuOpen,
@@ -550,7 +538,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: ScaleTransition(
                   scale: _menuAnimation,
                   alignment: Alignment.topRight,
-                  child: _buildMenuContent(),
+                  // ESTE GESTURE DETECTOR ABSORBE LOS TOQUES PARA QUE NO SE CIERRE AL TOCAR UN ESPACIO EN BLANCO
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: _buildMenuContent(),
+                  ),
                 ),
               ),
             ),

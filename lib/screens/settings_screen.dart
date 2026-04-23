@@ -20,7 +20,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
   }
 
-  // --- POPUP CONTRASEÑA (RESTUARADO) ---
   void _mostrarDialogoPassword() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
@@ -59,7 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      onPressed: () => Navigator.pop(context), // Lógica guardado aquí
+                      onPressed: () => Navigator.pop(context),
                       child: Text(isEng ? 'Update' : 'Actualizar', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
@@ -72,117 +71,160 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- POPUP IDIOMA ---
   void _mostrarDialogoIdioma() {
-    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
-    bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
-
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.translate, color: Color(0xFFA30000), size: 20),
-                  const SizedBox(width: 8),
-                  Text(isEng ? 'LANGUAGE' : 'IDIOMA', style: const TextStyle(color: Color(0xFFA30000), fontWeight: FontWeight.bold, fontSize: 14)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        TheRingPrivateApp.isEnglishNotifier.value = false;
-                        Navigator.pop(context);
-                      },
-                      child: Center(child: Text('🇪🇸 ES', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.bold))),
+      builder: (context) => ValueListenableBuilder<ThemeMode>(
+          valueListenable: TheRingPrivateApp.themeNotifier,
+          builder: (context, currentTheme, _) {
+            return ValueListenableBuilder<bool>(
+                valueListenable: TheRingPrivateApp.isEnglishNotifier,
+                builder: (context, isEng, _) {
+                  bool isDark = currentTheme == ThemeMode.dark;
+
+                  return Dialog(
+                    backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.translate, color: Color(0xFFA30000), size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(isEng ? 'LANGUAGE' : 'IDIOMA', style: const TextStyle(color: Color(0xFFA30000), fontWeight: FontWeight.bold, fontSize: 14)),
+                                ],
+                              ),
+                              IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: () => Navigator.pop(context))
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = false, // Sin pop
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: !isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Center(child: Text('🇪🇸 ES', style: TextStyle(color: !isEng ? const Color(0xFFA30000) : (isDark ? Colors.white : Colors.black), fontSize: 16, fontWeight: FontWeight.bold))),
+                                  ),
+                                ),
+                              ),
+                              Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = true, // Sin pop
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Center(child: Text('🇬🇧 EN', style: TextStyle(color: isEng ? const Color(0xFFA30000) : (isDark ? Colors.white : Colors.black), fontSize: 16, fontWeight: FontWeight.bold))),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        TheRingPrivateApp.isEnglishNotifier.value = true;
-                        Navigator.pop(context);
-                      },
-                      child: Center(child: Text('🇬🇧 EN', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.bold))),
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
+                  );
+                }
+            );
+          }
       ),
     );
   }
 
-  // --- POPUP APARIENCIA ---
   void _mostrarDialogoApariencia() {
-    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
-    bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
-
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.contrast, color: Color(0xFFA30000), size: 20),
-                  const SizedBox(width: 8),
-                  Text(isEng ? 'APPEARANCE' : 'APARIENCIA', style: const TextStyle(color: Color(0xFFA30000), fontWeight: FontWeight.bold, fontSize: 14)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        TheRingPrivateApp.themeNotifier.value = ThemeMode.light;
-                        Navigator.pop(context);
-                      },
-                      child: Center(child: Text(isEng ? 'Light' : 'Claro', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.bold))),
+      builder: (context) => ValueListenableBuilder<ThemeMode>(
+          valueListenable: TheRingPrivateApp.themeNotifier,
+          builder: (context, currentTheme, _) {
+            return ValueListenableBuilder<bool>(
+                valueListenable: TheRingPrivateApp.isEnglishNotifier,
+                builder: (context, isEng, _) {
+                  bool isDark = currentTheme == ThemeMode.dark;
+
+                  return Dialog(
+                    backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.contrast, color: Color(0xFFA30000), size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(isEng ? 'APPEARANCE' : 'APARIENCIA', style: const TextStyle(color: Color(0xFFA30000), fontWeight: FontWeight.bold, fontSize: 14)),
+                                ],
+                              ),
+                              IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: () => Navigator.pop(context))
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => TheRingPrivateApp.themeNotifier.value = ThemeMode.light, // Sin pop
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: !isDark ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Center(child: Text(isEng ? 'Light' : 'Claro', style: TextStyle(color: !isDark ? const Color(0xFFA30000) : Colors.black, fontSize: 16, fontWeight: FontWeight.bold))),
+                                  ),
+                                ),
+                              ),
+                              Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => TheRingPrivateApp.themeNotifier.value = ThemeMode.dark, // Sin pop
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Center(child: Text(isEng ? 'Dark' : 'Oscuro', style: TextStyle(color: isDark ? const Color(0xFFA30000) : Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        TheRingPrivateApp.themeNotifier.value = ThemeMode.dark;
-                        Navigator.pop(context);
-                      },
-                      child: Center(child: Text(isEng ? 'Dark' : 'Oscuro', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.bold))),
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
+                  );
+                }
+            );
+          }
       ),
     );
   }
 
-  // --- POPUP: ELIMINAR CUENTA ---
   void _mostrarDialogoEliminar() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
@@ -235,7 +277,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- BOTTOM SHEET: TEXTOS LEGALES Y MANUALES ---
   void _mostrarBottomSheetLegal(String titulo, String contenido) {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
@@ -264,7 +305,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               SizedBox(
-                height: MediaQuery.of(context).size.height * 0.65, // Aprovecha bien la pantalla
+                height: MediaQuery.of(context).size.height * 0.65,
                 child: SingleChildScrollView(
                   child: Text(contenido, style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 15, height: 1.5)),
                 ),
@@ -286,7 +327,168 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ================= TEXTOS LEGALES Y DE AYUDA (EXTRAIDOS DE CAPTURAS) =================
+  // --- MANUAL DE USUARIO ---
+  void _mostrarManual() {
+    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+    bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
+    final bgColor = isDark ? const Color(0xFF161616) : const Color(0xFFF9F9F9);
+    final textColor = isDark ? Colors.white : Colors.black87;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: bgColor,
+        insetPadding: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      isEng ? 'User Manual - The Ring Private' : 'Manual de Usuario - The Ring Private',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.grey[500]),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: isEng ? _buildManualTextEN(textColor) : _buildManualTextES(textColor),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA30000),
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 4,
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildManualTextES(Color textColor) {
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(color: textColor, fontSize: 15, height: 1.5),
+        children: const [
+          TextSpan(text: 'Bienvenido a la aplicación oficial de '),
+          TextSpan(text: 'The Ring Private', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: '. Esta guía explica cada paso para que puedas usar la app sin dudas.\n\n'),
+          TextSpan(text: '1. Registro de cuenta\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Pulsa '), TextSpan(text: 'Registrarse', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' en la pantalla inicial.\n'),
+          TextSpan(text: '2. Introduce: nombre, apellidos, DNI/NIE/Pasaporte, correo electrónico y contraseña.\n'),
+          TextSpan(text: '3. La contraseña debe tener mínimo 6 caracteres, 1 mayúscula y 1 símbolo especial.\n'),
+          TextSpan(text: '4. Marca la casilla de aceptación de términos y condiciones.\n'),
+          TextSpan(text: '5. Pulsa '), TextSpan(text: 'Registrarse', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' para completar el alta.\n\n'),
+          TextSpan(text: '2. Inicio de sesión\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Introduce tu correo o DNI y tu contraseña.\n'),
+          TextSpan(text: '2. Pulsa '), TextSpan(text: 'Iniciar sesión', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: '.\n'),
+          TextSpan(text: '3. Si olvidaste tu contraseña, pulsa '), TextSpan(text: '¿Olvidaste tu contraseña?', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' y sigue el proceso de recuperación dentro de la app.\n\n'),
+          TextSpan(text: '3. Pantalla principal (Home)\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'En Home verás dos bloques principales:\n'),
+          TextSpan(text: '• Notificaciones: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'avisos activos del club.\n'),
+          TextSpan(text: '• Botón QR: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'acceso al código identificativo personal.\n\n'),
+          TextSpan(text: '4. Uso del código QR\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Pulsa el botón QR desde Home.\n'),
+          TextSpan(text: '2. Se abre tu código identificativo para recepción.\n'),
+          TextSpan(text: '3. El QR se actualiza automáticamente y cambia al cerrar y volver a abrir la pantalla.\n'),
+          TextSpan(text: '4. Muestra el QR en recepción para validar tu acceso.\n\n'),
+          TextSpan(text: '5. Notificaciones\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Cada usuario gestiona sus notificaciones de forma independiente.\n'),
+          TextSpan(text: '2. Si eliminas una notificación con la cruz, desaparece de tu cuenta.\n'),
+          TextSpan(text: '3. Solo volverás a ver nuevas notificaciones publicadas por administración.\n\n'),
+          TextSpan(text: '6. Navegación principal\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '• Inicio: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'QR y notificaciones.\n'),
+          TextSpan(text: '• Perfil: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'puedes ver tu nombre, tu correo y cambiar tu contraseña.\n'),
+          TextSpan(text: '• Normas: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'reglas de obligado cumplimiento.\n'),
+          TextSpan(text: '• Ajustes: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'idioma, apariencia, legal y acciones de cuenta.\n\n'),
+          TextSpan(text: '7. Ajustes\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'Desde Ajustes puedes:\n- Cambiar contraseña.\n- Cambiar idioma (español/inglés).\n- Cambiar apariencia (modo claro/oscuro).\n- Consultar tarifas, términos, aviso legal, ayuda, FAQ y este manual.\n\n'),
+          TextSpan(text: '8. Seguridad y cuenta\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '• Cerrar sesión: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'cierra tu sesión en este dispositivo.\n'),
+          TextSpan(text: '• Eliminar cuenta: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'elimina tu acceso y datos asociados tras confirmación final. Esta acción es irreversible.\n\n'),
+          TextSpan(text: '9. Soporte\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'Si tienes un problema técnico, contacta por email en: '),
+          TextSpan(text: 'ringasociacion@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: '--- \n*The Ring Private - Privacidad y Respeto*', style: TextStyle(fontStyle: FontStyle.italic)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualTextEN(Color textColor) {
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(color: textColor, fontSize: 15, height: 1.5),
+        children: const [
+          TextSpan(text: 'Welcome to the official '),
+          TextSpan(text: 'The Ring Private', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: ' app. This guide explains every step so you can use the app without any doubts.\n\n'),
+          TextSpan(text: '1. Account Registration\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Tap '), TextSpan(text: 'Register', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' on the initial screen.\n'),
+          TextSpan(text: '2. Enter: name, surnames, ID/Passport, email, and password.\n'),
+          TextSpan(text: '3. Password must have a minimum of 6 characters, 1 uppercase, and 1 special symbol.\n'),
+          TextSpan(text: '4. Check the terms and conditions acceptance box.\n'),
+          TextSpan(text: '5. Tap '), TextSpan(text: 'Register', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' to complete the sign-up.\n\n'),
+          TextSpan(text: '2. Login\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Enter your email or ID and your password.\n'),
+          TextSpan(text: '2. Tap '), TextSpan(text: 'Login', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: '.\n'),
+          TextSpan(text: '3. If you forgot your password, tap '), TextSpan(text: 'Forgot your password?', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' and follow the recovery process.\n\n'),
+          TextSpan(text: '3. Main Screen (Home)\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'On the Home screen, you will see two main blocks:\n'),
+          TextSpan(text: '• Notifications: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'active club notices.\n'),
+          TextSpan(text: '• QR Button: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'access to your personal identification code.\n\n'),
+          TextSpan(text: '4. Using the QR Code\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Tap the QR button from the Home screen.\n'),
+          TextSpan(text: '2. Your identification code for reception opens.\n'),
+          TextSpan(text: '3. The QR updates automatically and changes when you close and reopen the screen.\n'),
+          TextSpan(text: '4. Show the QR at reception to validate your access.\n\n'),
+          TextSpan(text: '5. Notifications\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Each user manages their notifications independently.\n'),
+          TextSpan(text: '2. If you delete a notification with the cross, it disappears from your account.\n'),
+          TextSpan(text: '3. You will only see new notifications published by administration.\n\n'),
+          TextSpan(text: '6. Main Navigation\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '• Home: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'QR and notifications.\n'),
+          TextSpan(text: '• Profile: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'view your name, email, and change password.\n'),
+          TextSpan(text: '• Rules: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'mandatory rules.\n'),
+          TextSpan(text: '• Settings: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'language, appearance, legal, and account actions.\n\n'),
+          TextSpan(text: '7. Settings\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'From Settings you can:\n- Change password.\n- Change language (Spanish/English).\n- Change appearance (light/dark mode).\n- Check tariffs, terms, legal notice, help, FAQ, and this manual.\n\n'),
+          TextSpan(text: '8. Security and Account\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '• Log out: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'close your session on this device.\n'),
+          TextSpan(text: '• Delete account: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'permanently delete your access and associated data. This action is irreversible.\n\n'),
+          TextSpan(text: '9. Support\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'If you have a technical problem, contact us by email at: '),
+          TextSpan(text: 'ringasociacion@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: '--- \n*The Ring Private - Privacy and Respect*', style: TextStyle(fontStyle: FontStyle.italic)),
+        ],
+      ),
+    );
+  }
+
+  // ================= TEXTOS LEGALES Y DE AYUDA =================
   void _abrirTarifas(bool isEng) {
     String titulo = isEng ? 'How to become a member and tariffs' : 'Cómo hacerse socio y tarifas';
     String contenido = isEng
@@ -300,6 +502,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String contenido = isEng
         ? "These Terms and Conditions regulate the download, access, and use of the THE RING PRIVATE application (hereinafter, the Application). Access and use imply express acceptance of these conditions.\n\n1. Object\nThe Application aims to manage member identification, facilitate internal notices, and improve the club access experience. Its use is personal and non-transferable.\n\n2. User Registration\nTo create an account, the user must provide real and valid data (name, surname, ID, and email). The user is responsible for keeping their password safe and not sharing it.\n\n3. Rules of Use\nThe user agrees to use the Application lawfully and respectfully. It is prohibited to manipulate, copy, decompile, alter, or reuse the Application's content without express authorization.\n\n4. Intellectual Property\nAll intellectual and industrial property rights over the Application belong to THE RING PRIVATE or authorized third parties.\n\n5. Data Protection\nPersonal data will be processed according to the GDPR and current Spanish regulations. The user can exercise their rights of access, rectification, deletion, opposition, limitation, and portability by contacting the entity.\n\n6. Availability and Responsibility\nTHE RING PRIVATE may update, modify, or suspend the Application for technical or legal reasons. Absolute availability is not guaranteed.\n\n7. Account Deletion\nThe user can request account deletion from the settings section. This action eliminates access and associated data in enabled systems, except for legal retention obligations.\n\n8. Applicable Legislation\nThese conditions are governed by Spanish law. Any controversy will be submitted to the competent courts and tribunals of Madrid, unless a mandatory legal provision states otherwise."
         : "Estos Términos y Condiciones regulan la descarga, el acceso y el uso de la aplicación THE RING PRIVATE (en adelante, la Aplicación). El acceso y uso de la Aplicación implica la aceptación expresa de estas condiciones.\n\n1. Objeto\nLa Aplicación tiene como finalidad gestionar la identificación de socios, facilitar la comunicación de avisos internos y mejorar la experiencia de acceso al club. Su uso es personal e intransferible.\n\n2. Registro de usuario\nPara crear una cuenta, el usuario debe facilitar datos reales y vigentes (nombre, apellidos, documento de identidad y correo electrónico). El usuario es responsable de custodiar su contraseña y de no compartirla con terceros.\n\n3. Normas de uso\nEl usuario se compromete a utilizar la Aplicación de forma lícita, respetuosa y conforme a la normativa aplicable. Queda prohibido manipular, copiar, descompilar, alterar o reutilizar el contenido de la Aplicación sin autorización expresa.\n\n4. Propiedad intelectual\nTodos los derechos de propiedad intelectual e industrial sobre la Aplicación, su diseño, textos, marcas y elementos gráficos pertenecen a THE RING PRIVATE o a terceros autorizados.\n\n5. Protección de datos\nLos datos personales se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) y la normativa española vigente. El tratamiento se realiza para gestionar la relación con el socio y el funcionamiento de la Aplicación. El usuario puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad mediante contacto con la entidad.\n\n6. Disponibilidad y responsabilidad\nTHE RING PRIVATE podrá actualizar, modificar o suspender la Aplicación por motivos técnicos, legales o de mantenimiento. Aunque se aplican medidas de seguridad, no se garantiza la disponibilidad absoluta ni la ausencia total de errores técnicos.\n\n7. Baja y eliminación de cuenta\nEl usuario puede solicitar la eliminación de su cuenta desde la sección de ajustes. Esta acción elimina el acceso y los datos asociados en los sistemas habilitados, salvo obligación legal de conservación.\n\n8. Legislación aplicable\nEstas condiciones se rigen por la legislación española. Cualquier controversia se someterá a los juzgados y tribunales competentes de Madrid, salvo disposición legal imperativa en contrario.";
+    _mostrarBottomSheetLegal(titulo, contenido);
+  }
+
+  // --- TEXTO EXACTO DEL AVISO LEGAL (NUEVO Y LITERAL) ---
+  void _abrirAvisoLegal(bool isEng) {
+    String titulo = isEng ? 'Legal Notice' : 'Aviso legal';
+    String contenido = isEng
+        ? "1. Identification of the controller\nThe data controller is THE RING PRIVATE.\nAddress: C. del Amparo, 75, Centro, 28012 Madrid.\nContact email: ringasociacion@gmail.com\n\n2. Processed data\nWe process the necessary data to manage your registration and your access as a member: name, surnames, email and identity document.\n\n3. Purpose\nThe main purpose is to manage the relationship with the member, their access to the club and internal service communications.\n\n4. Legal basis\nThe legal basis of the processing is the consent of the user and the execution of the associative relationship.\n\n5. Retention\nThe data will be kept as long as there is an active relationship with the member or during the applicable legal periods.\n\n6. Rights\nYou can exercise your rights of access, rectification, deletion, opposition, limitation and portability upon request to the contact email.\n\n7. Security\nWe apply reasonable technical and organizational measures to prevent unauthorized access, loss or alteration of data.\n\n8. Changes to the legal notice\nThis notice may be updated due to regulatory changes or service improvements. The current version will always be available in the application.\n\nDate of last update: 17/04/2026"
+        : "1. Identificación del responsable\nEl responsable del tratamiento es THE RING PRIVATE.\nDirección: C. del Amparo, 75, Centro, 28012 Madrid.\nCorreo de contacto: ringasociacion@gmail.com\n\n2. Datos tratados\nTratamos los datos necesarios para gestionar tu alta y tu acceso como socio: nombre, apellidos, correo electrónico y documento de identidad.\n\n3. Finalidad\nLa finalidad principal es gestionar la relación con el socio, su acceso al club y las comunicaciones internas de servicio.\n\n4. Base jurídica\nLa base legal del tratamiento es el consentimiento del usuario y la ejecución de la relación asociativa.\n\n5. Conservación\nLos datos se conservarán mientras exista relación activa con el socio o durante los plazos legales aplicables.\n\n6. Derechos\nPuedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad mediante solicitud al correo de contacto.\n\n7. Seguridad\nAplicamos medidas técnicas y organizativas razonables para prevenir accesos no autorizados, pérdida o alteración de datos.\n\n8. Cambios en el aviso legal\nEste aviso puede actualizarse por cambios normativos o mejoras del servicio. La versión vigente estará siempre disponible en la aplicación.\n\nFecha de última actualización: 17/04/2026";
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
@@ -331,7 +542,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               builder: (context, isEng, _) {
                 final isDark = currentTheme == ThemeMode.dark;
 
-                // COLORES SÓLIDOS Y PUROS PARA LAS TARJETAS (Como en las capturas)
                 final scaffoldBgColor = isDark ? const Color(0xFF000000) : const Color(0xFFF5F5F5);
                 final cardBgColor = isDark ? const Color(0xFF161616) : Colors.white;
                 final textColor = isDark ? Colors.white : Colors.black;
@@ -339,14 +549,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 return Scaffold(
                   backgroundColor: scaffoldBgColor,
-                  // EL SAFEAREA GARANTIZA QUE EL DISEÑO NUNCA TOQUE LA CÁMARA (NOTCH) NI LA BARRA DE BATERÍA
                   body: SafeArea(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // CABECERA ROJA DEGRADADA (Estilo exacto de captura)
                           Container(
                             width: double.infinity,
                             margin: const EdgeInsets.only(bottom: 24),
@@ -355,9 +563,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               gradient: const LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Color(0xFFA30000), Color(0xFF4A0000)], // Degradado profundo
+                                colors: [Color(0xFFA30000), Color(0xFF4A0000)],
                               ),
-                              borderRadius: BorderRadius.circular(24), // Bordes más redondeados
+                              borderRadius: BorderRadius.circular(24),
                               boxShadow: [
                                 BoxShadow(color: Colors.black.withOpacity(isDark ? 0.5 : 0.2), blurRadius: 10, offset: const Offset(0, 4))
                               ],
@@ -374,7 +582,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 const SizedBox(height: 20),
                                 Image.asset(
                                   'lib/assets/guantes.png',
-                                  height: 120, // Guantes más grandes como en el diseño
+                                  height: 120,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) => const Icon(Icons.sports_mma, size: 80, color: Colors.white),
                                 ),
@@ -382,7 +590,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
 
-                          // Tarjeta Usuario
                           Card(
                             elevation: isDark ? 0 : 2,
                             color: cardBgColor,
@@ -429,7 +636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
                                 _buildRow(Icons.description, isEng ? 'Terms and Conditions' : 'Términos y Condiciones', iconColor, textColor, onTap: () => _abrirTerminos(isEng)),
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
-                                _buildRow(Icons.gavel, isEng ? 'Legal Notice' : 'Aviso legal', iconColor, textColor, onTap: () => _mostrarBottomSheetLegal(isEng ? 'Legal Notice' : 'Aviso legal', isEng ? 'Fiscal and legal information of the company responsible for The Ring Private...' : 'Información fiscal y legal de la empresa responsable de The Ring Private...')),
+                                _buildRow(Icons.gavel, isEng ? 'Legal Notice' : 'Aviso legal', iconColor, textColor, onTap: () => _abrirAvisoLegal(isEng)),
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
                                 _buildRow(Icons.help, isEng ? 'Help' : 'Ayuda', iconColor, textColor, onTap: () => _abrirAyuda(isEng)),
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
@@ -449,6 +656,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildRow(Icons.power_settings_new, isEng ? 'Log out' : 'Cerrar sesión', iconColor, textColor, onTap: () => _cerrarSesion(context)),
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
                                 _buildRow(Icons.close, isEng ? 'DELETE ACCOUNT' : 'ELIMINAR CUENTA', const Color(0xFFFF4C4C), const Color(0xFFFF4C4C), isDestructive: true, onTap: _mostrarDialogoEliminar),
+                                Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
+                                // BOTÓN DE MANUAL DE USUARIO AÑADIDO
+                                _buildRow(Icons.menu_book, isEng ? 'User Manual' : 'Manual de usuario', iconColor, textColor, onTap: () => _mostrarManual()),
                               ],
                             ),
                           ),
@@ -463,7 +673,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- COMPONENTE FILA CON ICONOS SÓLIDOS (NO FRÁGILES) ---
   Widget _buildRow(IconData icon, String text, Color iconColor, Color textColor, {bool isDestructive = false, VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap,
