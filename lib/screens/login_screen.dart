@@ -15,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _userController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _resetController = TextEditingController(); // Controlador para recuperar password
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
@@ -35,6 +36,83 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // --- POP-UP PARA RECUPERAR CONTRASEÑA (FUNCIONAL) ---
+  void _mostrarDialogoRecuperarPassword() {
+    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    _resetController.clear();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(isEng ? 'Recover Password' : 'Recuperar Contraseña', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(isEng ? 'Enter your email or DNI to receive a reset link.' : 'Introduce tu correo o DNI para recibir un enlace de recuperación.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _resetController,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                decoration: InputDecoration(
+                  hintText: isEng ? 'Email or DNI' : 'Correo o DNI',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
+                  border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide.none),
+                  focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFFA30000))),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: Text(isEng ? 'Cancel' : 'Cancelar', style: const TextStyle(color: Colors.grey)))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12)))),
+                      onPressed: () async {
+                        String input = _resetController.text.trim();
+                        if (input.isEmpty) return;
+
+                        Navigator.pop(context); // Cerramos el dialogo inmediatamente
+
+                        try {
+                          String emailToReset = input;
+                          // Si es DNI, buscamos el correo asociado
+                          if (!input.contains('@')) {
+                            final snapshot = await FirebaseDatabase.instance.ref("MapeoDNI").child(input.toUpperCase()).get();
+                            emailToReset = snapshot.exists ? snapshot.value.toString() : '${input.toLowerCase()}@thering.local';
+                          }
+
+                          await FirebaseAuth.instance.sendPasswordResetEmail(email: emailToReset);
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Recovery email sent. Check your inbox.' : 'Correo de recuperación enviado. Revisa tu bandeja.'), backgroundColor: Colors.green));
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Error sending recovery email.' : 'Error al enviar correo de recuperación.'), backgroundColor: const Color(0xFFA30000)));
+                          }
+                        }
+                      },
+                      child: Text(isEng ? 'SEND' : 'ENVIAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _mostrarDialogoIdioma() {
@@ -297,94 +375,97 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 return Scaffold(
                   backgroundColor: scaffoldBgColor,
-                  body: Center(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: 60),
-                            Stack(
-                              clipBehavior: Clip.none,
-                              alignment: Alignment.topCenter,
-                              children: [
-                                Card(
-                                  margin: const EdgeInsets.only(top: 50, bottom: 20),
-                                  elevation: isDarkMode ? 0 : 10,
-                                  shadowColor: Colors.black26,
-                                  color: cardBgColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: const BorderRadius.all(Radius.circular(24)),
-                                    side: isDarkMode ? const BorderSide(color: Color(0xFF2A2A2A)) : BorderSide.none,
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(24, 70, 24, 24),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        _buildInput(_userController, isEng ? 'Email or DNI' : 'Correo o DNI', false, textColor, borderColor, cardBgColor),
-                                        const SizedBox(height: 16),
-                                        _buildInput(_passwordController, isEng ? 'Password' : 'Contraseña', true, textColor, borderColor, cardBgColor),
-                                        const SizedBox(height: 12),
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: TextButton(
-                                            onPressed: () {},
-                                            child: Text(isEng ? 'Forgot your password?' : '¿Olvidaste tu contraseña?', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFFA30000),
-                                              minimumSize: const Size(double.infinity, 55),
-                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30))),
-                                              elevation: 4,
-                                              shadowColor: const Color(0xFFA30000).withOpacity(0.5)
-                                          ),
-                                          onPressed: _isLoading ? null : () => _signIn(isEng),
-                                          child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(isEng ? 'LOGIN' : 'INICIAR SESIÓN', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                                        ),
-                                        const SizedBox(height: 30),
-                                        Center(
-                                            child: GestureDetector(
-                                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
-                                                child: Text(isEng ? 'No account? Register' : '¿No tienes cuenta? Regístrate', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold))
-                                            )
-                                        ),
-                                        const SizedBox(height: 24),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            InkWell(
-                                              onTap: _mostrarDialogoIdioma,
-                                              child: Row(children: [const Icon(Icons.translate, size: 18), const SizedBox(width: 6), Text(isEng ? 'EN' : 'ES', style: const TextStyle(fontWeight: FontWeight.bold))]),
+                  body: SafeArea(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 40),
+                              Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.topCenter,
+                                children: [
+                                  Card(
+                                    margin: const EdgeInsets.only(top: 50, bottom: 20),
+                                    elevation: isDarkMode ? 0 : 10,
+                                    shadowColor: Colors.black26,
+                                    color: cardBgColor,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: const BorderRadius.all(Radius.circular(24)),
+                                      side: isDarkMode ? const BorderSide(color: Color(0xFF2A2A2A)) : BorderSide.none,
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(24, 70, 24, 24),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          _buildInput(_userController, isEng ? 'Email or DNI' : 'Correo o DNI', false, textColor, borderColor, cardBgColor),
+                                          const SizedBox(height: 16),
+                                          _buildInput(_passwordController, isEng ? 'Password' : 'Contraseña', true, textColor, borderColor, cardBgColor),
+                                          const SizedBox(height: 12),
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: TextButton(
+                                              // AHORA LLAMA A LA FUNCIÓN DE RECUPERAR
+                                              onPressed: _mostrarDialogoRecuperarPassword,
+                                              child: Text(isEng ? 'Forgot your password?' : '¿Olvidaste tu contraseña?', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
                                             ),
-                                            const SizedBox(width: 40),
-                                            InkWell(
-                                              onTap: _mostrarManual,
-                                              child: const Row(children: [Icon(Icons.menu_book, size: 18), SizedBox(width: 6), Text('Manual', style: TextStyle(fontWeight: FontWeight.bold))]),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFFA30000),
+                                                minimumSize: const Size(double.infinity, 55),
+                                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30))),
+                                                elevation: 4,
+                                                shadowColor: const Color(0xFFA30000).withOpacity(0.5)
                                             ),
-                                          ],
-                                        )
-                                      ],
+                                            onPressed: _isLoading ? null : () => _signIn(isEng),
+                                            child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(isEng ? 'LOGIN' : 'INICIAR SESIÓN', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                          ),
+                                          const SizedBox(height: 30),
+                                          Center(
+                                              child: GestureDetector(
+                                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
+                                                  child: Text(isEng ? 'No account? Register' : '¿No tienes cuenta? Regístrate', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold))
+                                              )
+                                          ),
+                                          const SizedBox(height: 24),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              InkWell(
+                                                onTap: _mostrarDialogoIdioma,
+                                                child: Row(children: [const Icon(Icons.translate, size: 18), const SizedBox(width: 6), Text(isEng ? 'EN' : 'ES', style: const TextStyle(fontWeight: FontWeight.bold))]),
+                                              ),
+                                              const SizedBox(width: 40),
+                                              InkWell(
+                                                onTap: _mostrarManual,
+                                                child: const Row(children: [Icon(Icons.menu_book, size: 18), SizedBox(width: 6), Text('Manual', style: TextStyle(fontWeight: FontWeight.bold))]),
+                                              ),
+                                            ],
+                                          )
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                    top: -10,
-                                    child: Image.asset(
-                                        logoPath,
-                                        width: 150,
-                                        height: 100,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50)
-                                    )
-                                ),
-                              ],
-                            ),
-                          ],
+                                  Positioned(
+                                      top: -10,
+                                      child: Image.asset(
+                                          logoPath,
+                                          width: 150,
+                                          height: 100,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50)
+                                      )
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
