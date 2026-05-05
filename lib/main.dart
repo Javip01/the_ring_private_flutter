@@ -6,8 +6,15 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
+  // Asegura que los cimientos de Flutter están listos
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Bloque a prueba de balas para inicializar Firebase
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp();
+  }
+
+  // Arranca tu app (Asegúrate de que TheRingPrivateApp() es el nombre de tu clase principal)
   runApp(const TheRingPrivateApp());
 }
 
