@@ -296,7 +296,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return StatefulBuilder(builder: (context, setStateModal) {
           _qrTimer?.cancel();
           _qrTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            if (mounted) setStateModal(() { if (_secondsLeft > 1) _secondsLeft--; else _generarNuevoQR(); });
+            if (mounted) {
+              setStateModal(() {
+                if (_secondsLeft > 1) {
+                  _secondsLeft--;
+                } else {
+                  _generarNuevoQR();
+                }
+              });
+            }
           });
           bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
 
@@ -313,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   const SizedBox(height: 24),
                   Text(isEng ? 'Dynamic Secure Access' : 'Acceso Seguro Dinámico', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text(isEng ? 'This code expires in 1 minute' : 'Este código caduca en 1 minuto', style: const TextStyle(color: Color(0xFFFF4C4C), fontSize: 14)),
+                  Text(isEng ? 'This code expires in $_secondsLeft seconds' : 'Este código caduca en $_secondsLeft segundos', style: const TextStyle(color: Color(0xFFFF4C4C), fontSize: 14)),
                   const SizedBox(height: 24),
                   Card(color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Padding(padding: const EdgeInsets.all(16.0), child: QrImageView(data: _currentQrData, size: 250.0))),
                   const SizedBox(height: 32),
@@ -331,10 +339,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ).then((_) => _qrTimer?.cancel());
   }
 
+  // AQUÍ ESTÁ EL CAMBIO CLAVE PARA QUE ENCAJE CON EL ESCÁNER EN KOTLIN
   void _generarNuevoQR() {
     final user = FirebaseAuth.instance.currentUser;
     setState(() {
-      _currentQrData = "${user?.uid ?? 'SOCIO'}_${DateTime.now().millisecondsSinceEpoch}";
+      String email = user?.email ?? "";
+      // Usamos el formato JSON exacto que espera leer la app Kotlin
+      _currentQrData = '{"perfil": {"email": "$email"}}';
       _secondsLeft = 60;
     });
   }

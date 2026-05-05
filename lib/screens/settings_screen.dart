@@ -414,7 +414,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   await user.reauthenticateWithCredential(credential);
 
                                   String safeEmail = user.email!.replaceAll('.', '_');
-                                  await FirebaseDatabase.instance.ref("Usuarios").child(safeEmail).remove();
+                                  await FirebaseDatabase.instance.ref("usuarios").child(safeEmail).remove();
                                   await user.delete();
 
                                   if (mounted) {

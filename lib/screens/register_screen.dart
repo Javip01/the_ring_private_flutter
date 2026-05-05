@@ -22,13 +22,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isPasswordVisible = false;
   bool _aceptaTerminos = false;
 
-  // ESTADOS PARA LA VALIDACIÓN DE CONTRASEÑA Y DOCUMENTO
   bool _hasMinLength = false;
   bool _hasUppercase = false;
   bool _hasSpecialChar = false;
-  String _tipoDocumento = 'DNI/NIE'; // Por defecto
+  String _tipoDocumento = 'DNI/NIE';
 
-  // --- 1. ALGORITMO MATEMÁTICO OFICIAL PARA DNI/NIE ESPAÑOL ---
   bool _validarDNIoNIE(String dnioNie) {
     String dni = dnioNie.toUpperCase().trim();
     final regex = RegExp(r'^[XYZ]?\d{7,8}[A-Z]$');
@@ -54,7 +52,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return letrasDNI[indiceLetra] == letraFinal;
   }
 
-  // --- 2. VALIDACIÓN DE FORMATO DE CORREO ELECTRÓNICO ---
   bool _validarEmail(String email) {
     final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return regex.hasMatch(email.trim());
@@ -77,7 +74,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // VALIDACIÓN DE SEGURIDAD: DOCUMENTOS
     if (_tipoDocumento == 'DNI/NIE' && !_validarDNIoNIE(documento)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Invalid DNI/NIE' : 'El DNI o NIE introducido no es válido'), backgroundColor: const Color(0xFFA30000)));
       return;
@@ -86,13 +82,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // VALIDACIÓN DE SEGURIDAD: CORREO
     if (correo.isNotEmpty && !_validarEmail(correo)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Invalid email format' : 'El formato del correo no es válido'), backgroundColor: const Color(0xFFA30000)));
       return;
     }
 
-    // VALIDACIÓN DE SEGURIDAD: CONTRASEÑA
     if (!_hasMinLength || !_hasUppercase || !_hasSpecialChar) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Password does not meet security requirements' : 'La contraseña no cumple los requisitos de seguridad'), backgroundColor: const Color(0xFFA30000)));
       return;
@@ -103,13 +97,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       String signupEmail = correo.isNotEmpty ? correo : '${documento.toLowerCase()}@thering.local';
       UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: signupEmail, password: password);
       await cred.user?.updateDisplayName(nombre);
+
+      // Mantenemos MapeoDNI para el Login de Flutter
       await FirebaseDatabase.instance.ref("MapeoDNI").child(documento).set(signupEmail);
-      await FirebaseDatabase.instance.ref("Usuarios").child(signupEmail.replaceAll('.', '_')).child("perfil").set({
-        "nombreReal": nombre,
-        "apellidos": apellidos,
-        "tipoDocumento": _tipoDocumento,
-        "dni": documento,
-        "correo": correo,
+
+      // GUARDAMOS EN LA BD EXACTAMENTE COMO KOTLIN ESPERA
+      await FirebaseDatabase.instance.ref("usuarios").child(signupEmail.replaceAll('.', '_')).set({
+        "name": nombre,
+        "surname": apellidos,
+        "documento": documento,
+        "email": signupEmail,
+        "tipoDocumento": _tipoDocumento, // Dato extra, no molesta a Kotlin
+        "bloqueado": false,
+        "taquilla_actual": "",
+        "fecha_asignacion_taquilla": "",
       });
 
       if (!mounted) return;
@@ -240,7 +241,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     _buildRingInput(_apellidosController, isEng ? 'Surnames' : 'Apellidos', false, textColor, borderColor, cardBgColor),
                                     const SizedBox(height: 16),
 
-                                    // --- DESPLEGABLE TIPO DE DOCUMENTO ---
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                                       decoration: BoxDecoration(
@@ -272,7 +272,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                     const SizedBox(height: 16),
 
-                                    // --- TEXTFIELD DEL DOCUMENTO ---
                                     TextField(
                                       controller: _dniController,
                                       style: TextStyle(color: textColor),
@@ -294,7 +293,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     _buildRingInput(_emailController, isEng ? 'Email' : 'Correo Electrónico', false, textColor, borderColor, cardBgColor),
                                     const SizedBox(height: 16),
 
-                                    // --- TEXTFIELD DE CONTRASEÑA EN TIEMPO REAL ---
                                     TextField(
                                       controller: _passwordController,
                                       obscureText: !_isPasswordVisible,
@@ -303,7 +301,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         setState(() {
                                           _hasMinLength = value.length >= 6;
                                           _hasUppercase = value.contains(RegExp(r'[A-Z]'));
-                                          // Busca cualquier cosa que NO sea una letra ni un número
                                           _hasSpecialChar = value.contains(RegExp(r'[^a-zA-Z0-9]'));
                                         });
                                       },
@@ -319,7 +316,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     ),
 
-                                    // --- SEMÁFORO DE CONTRASEÑA ---
                                     Padding(
                                       padding: const EdgeInsets.only(top: 12, left: 12, bottom: 8),
                                       child: Column(
