@@ -53,18 +53,18 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyA4I4k1M7rxCc-630dzd2DMpoo4axtrYFQ',
     appId: '1:244704747666:android:7d009574ea350a356c064b',
     messagingSenderId: '244704747666',
-    projectId: 'pruebaringprivate100',
-    databaseURL: 'https://pruebaringprivate100-default-rtdb.europe-west1.firebasedatabase.app',
-    storageBucket: 'pruebaringprivate100.firebasestorage.app',
+    projectId: 'laasociacion-57649',
+    databaseURL: '[https://laasociacion-57649-default-rtdb.firebaseio.com](https://laasociacion-57649-default-rtdb.firebaseio.com)',
+    storageBucket: 'laasociacion-57649.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDeDyUYUWhV7U1vwvuPeNSo-9Chcgg3aN4',
     appId: '1:244704747666:ios:37e4e57584edbda06c064b',
     messagingSenderId: '244704747666',
-    projectId: 'pruebaringprivate100',
-    databaseURL: 'https://pruebaringprivate100-default-rtdb.europe-west1.firebasedatabase.app',
-    storageBucket: 'pruebaringprivate100.firebasestorage.app',
+    projectId: 'laasociacion-57649',
+    databaseURL: '[https://laasociacion-57649-default-rtdb.firebaseio.com](https://laasociacion-57649-default-rtdb.firebaseio.com)',
+    storageBucket: 'laasociacion-57649.appspot.com',
     iosBundleId: 'com.example.theRingPrivateFlutter',
   );
 }
