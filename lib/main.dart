@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,12 +11,28 @@ void main() async {
   // Asegura que los cimientos de Flutter están listos
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Bloque a prueba de balas para inicializar Firebase
+  // Bloque a prueba de balas para inicializar Firebase dependiendo del sistema
   if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp();
+    if (!kIsWeb && Platform.isIOS) {
+      // INICIALIZACIÓN PURA EN CÓDIGO PARA iOS (¡Adiós Xcode!)
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyB2DfMgcb476VwqJZFrO4Fgf0lT5HbszTQ',
+          appId: '1:554282786135:ios:f2e0ee444989381eea3212',
+          messagingSenderId: '554282786135',
+          projectId: 'laasociacion-57649',
+          databaseURL: 'https://laasociacion-57649-default-rtdb.firebaseio.com',
+          storageBucket: 'laasociacion-57649.appspot.com',
+          iosBundleId: 'theRingPrivate.theRing',
+        ),
+      );
+    } else {
+      // Android sigue funcionando de forma nativa porque ya lo configuraste bien
+      await Firebase.initializeApp();
+    }
   }
 
-  // Arranca tu app (Asegúrate de que TheRingPrivateApp() es el nombre de tu clase principal)
+  // Arranca tu app
   runApp(const TheRingPrivateApp());
 }
 
