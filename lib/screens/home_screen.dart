@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -20,6 +22,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _secondsLeft = 60;
   Timer? _qrTimer;
 
+  Map<String, dynamic>? _userProfileData;
+  String _qrSessionNonce = "";
+
   final GlobalKey _qrButtonKey = GlobalKey();
   final double _qrRadius = 35.0;
 
@@ -35,8 +40,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    _cargarDatosUsuario();
     _menuController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+  }
+
+  Future<void> _cargarDatosUsuario() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // MAGIA: Ahora buscamos usando el ID único de Firebase (UID) igual que muestra tu foto
+      DatabaseEvent event = await FirebaseDatabase.instance.ref("usuarios").child(user.uid).once();
+
+      if (event.snapshot.exists && mounted) {
+        setState(() {
+          final data = event.snapshot.value;
+          if (data is Map) {
+            _userProfileData = Map<String, dynamic>.from(data);
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -236,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       _buildRuleItem(isEng ? 'ATTITUDE: Disrespectful behavior towards others is not allowed.' : 'ACTITUD: No está permitida ninguna actitud irrespetuosa hacia los demás.', isDark),
                       _buildRuleItem(isEng ? 'DEVICES: The use of mobile phones, video, or photo cameras is not allowed.' : 'DISPOSITIVOS: No está permitido el uso de teléfonos móviles, cámaras de filmación o fotográficas.', isDark),
                       _buildRuleItem(isEng ? 'PROHIBITED PRACTICES: Scat, blood, or extreme pain practices are not allowed.' : 'PRÁCTICAS PROHIBIDAS: No está permitida la práctica del scat, sangre o dolor extremo.', isDark),
-                      _buildRuleItem(isEng ? 'SUBSTANCES: The sale or consumption of any type of drugs or narcotics is not allowed.' : 'SUSTANCIAS: No está permitida la venta o consumo de cualquier tipo de drogas o estupefacientes.', isDark),
+                      _buildRuleItem(isEng ? 'SUSTANCIAS: No está permitida la venta o consumo de cualquier tipo de drogas o estupefacientes.' : 'SUSTANCIAS: No está permitida la venta o consumo de cualquier tipo de drogas o estupefacientes.', isDark),
 
                       const SizedBox(height: 24),
                       Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 1),
@@ -286,6 +309,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _mostrarBottomSheetQR() {
+    _qrSessionNonce = "session_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(100000)}";
+
     _generarNuevoQR();
     showModalBottomSheet(
       context: context,
@@ -327,7 +352,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   const SizedBox(height: 32),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), minimumSize: const Size(double.infinity, 50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
-                    onPressed: () { _qrTimer?.cancel(); Navigator.pop(context); },
+                    onPressed: () {
+                      _cerrarQR();
+                      Navigator.pop(context);
+                    },
                     child: Text(isEng ? 'CLOSE' : 'CERRAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   )
                 ],
@@ -336,18 +364,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           );
         });
       },
-    ).then((_) => _qrTimer?.cancel());
+    ).then((_) {
+      _cerrarQR();
+    });
   }
 
-  // AQUÍ ESTÁ EL CAMBIO CLAVE PARA QUE ENCAJE CON EL ESCÁNER EN KOTLIN
   void _generarNuevoQR() {
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) return;
+
+    String email = user.email!;
+    String uid = user.uid;
+    String emailSafe = email.replaceAll('.', '_');
+
+    int issuedAt = DateTime.now().millisecondsSinceEpoch;
+    int expiresAt = issuedAt + 60000;
+
+    String qrToken = "token_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(100000)}";
+
+    // 1. Añadimos el ID en el payload del JSON para que quede IDENTICO a la foto
+    Map<String, dynamic> datosPerfilParaQR = _userProfileData ?? {};
+    datosPerfilParaQR["codeUser"] = uid;
+
+    // 2. CONSTRUIMOS EL JSON
+    Map<String, dynamic> qrData = {
+      "token": qrToken,
+      "session": _qrSessionNonce,
+      "issuedAt": issuedAt,
+      "expiresAt": expiresAt,
+      "emailSafe": emailSafe,
+      "perfil": datosPerfilParaQR,
+    };
+
     setState(() {
-      String email = user?.email ?? "";
-      // Usamos el formato JSON exacto que espera leer la app Kotlin
-      _currentQrData = '{"perfil": {"email": "$email"}}';
+      _currentQrData = jsonEncode(qrData);
       _secondsLeft = 60;
     });
+  }
+
+  void _cerrarQR() {
+    _qrTimer?.cancel();
   }
 
   @override
@@ -549,7 +605,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: ScaleTransition(
                   scale: _menuAnimation,
                   alignment: Alignment.topRight,
-                  // ESTE GESTURE DETECTOR ABSORBE LOS TOQUES PARA QUE NO SE CIERRE AL TOCAR UN ESPACIO EN BLANCO
                   child: GestureDetector(
                     onTap: () {},
                     child: _buildMenuContent(),

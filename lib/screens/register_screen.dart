@@ -95,19 +95,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
     try {
       String signupEmail = correo.isNotEmpty ? correo : '${documento.toLowerCase()}@thering.local';
+
+      // Creamos la cuenta real en Firebase
       UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: signupEmail, password: password);
       await cred.user?.updateDisplayName(nombre);
 
-      // Mantenemos MapeoDNI para el Login de Flutter
+      // Extraemos el ID único generado por Firebase (El que sale en tus fotos)
+      String uid = cred.user!.uid;
+
+      // 1. Guardamos el Mapeo DNI para los inicios de sesión
       await FirebaseDatabase.instance.ref("MapeoDNI").child(documento).set(signupEmail);
 
-      // GUARDAMOS EN LA BD EXACTAMENTE COMO KOTLIN ESPERA
-      await FirebaseDatabase.instance.ref("usuarios").child(signupEmail.replaceAll('.', '_')).set({
-        "name": nombre,
-        "surname": apellidos,
+      // 2. Guardamos la información del perfil EXACTAMENTE como aparece en tus capturas
+      await FirebaseDatabase.instance.ref("usuarios").child(uid).set({
+        "acceptedTerms": _aceptaTerminos,
         "documento": documento,
         "email": signupEmail,
-        "tipoDocumento": _tipoDocumento, // Dato extra, no molesta a Kotlin
+        "name": nombre,
+        "surname": apellidos,
+        "tipoDocumento": _tipoDocumento,
         "bloqueado": false,
         "taquilla_actual": "",
         "fecha_asignacion_taquilla": "",
