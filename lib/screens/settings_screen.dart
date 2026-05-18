@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // NECESARIO PARA EL PORTAPAPELES (NUEVO)
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -24,19 +25,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
   }
 
-  // --- SOLUCIÓN AL CORREO EN iOS ---
+  // --- SOLUCIÓN DEFINITIVA AL CORREO EN iOS ---
   void _abrirGmailContacto() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'theringprivate@gmail.com',
-    );
+    final Uri emailUri = Uri.parse('mailto:theringprivate@gmail.com');
+    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+
     try {
-      // Usamos launchUrl directo sin validarlo con canLaunchUrl, para evitar bloqueos del sistema en iOS
-      await launchUrl(emailUri);
+      // Intentamos abrir la app de correo forzando la salida (LaunchMode.externalApplication)
+      bool lanzado = await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+      if (!lanzado) {
+        throw Exception('No se pudo abrir el correo');
+      }
     } catch (e) {
+      // SALVAVIDAS: Si falla (muy común en iPhones sin Apple Mail configurado), lo copiamos al portapapeles
+      Clipboard.setData(const ClipboardData(text: 'theringprivate@gmail.com'));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("No se pudo abrir tu app de correo. Escríbenos a theringprivate@gmail.com"))
+            SnackBar(
+              content: Text(isEng
+                  ? "Mail app not found. Email copied to clipboard!"
+                  : "App de correo no configurada. ¡Correo copiado al portapapeles!"),
+              backgroundColor: Colors.green, // En verde porque la copia ha sido un éxito
+              duration: const Duration(seconds: 4),
+            )
         );
       }
     }
@@ -708,8 +719,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _abrirAyuda(bool isEng) {
     String titulo = isEng ? 'Help and Support' : 'Ayuda y soporte';
     String contenido = isEng
-        ? "If you have a problem with the application, follow this order:\n\n1. Check the Frequently Asked Questions (FAQ) section first.\n2. If not resolved, write to ringasociacion@gmail.com indicating:\n- Account email\n- ID used in registration\n- Mobile model\n- OS Version\n- Exact description of the error\n\nSupport via email:\nringasociacion@gmail.com\n\nOfficial networks:\nFacebook: https://www.facebook.com/theringprivate\nInstagram: https://www.instagram.com/theringprivate\n\nIn-person assistance:\nC. del Amparo, 75, Centro, 28012 Madrid"
-        : "Si tienes un problema con la aplicación, sigue este orden:\n\n1. Revisa primero la sección de Preguntas Frecuentes.\n2. Si no se resuelve, escribe a ringasociacion@gmail.com indicando:\n- Correo de tu cuenta\n- DNI usado en el registro\n- Modelo de móvil\n- Versión de Android/iOS\n- Descripción exacta del error\n\nSoporte por correo:\nringasociacion@gmail.com\n\nRedes oficiales:\nFacebook: https://www.facebook.com/theringprivate\nInstagram: https://www.instagram.com/theringprivate\n\nAtención presencial:\nC. del Amparo, 75, Centro, 28012 Madrid";
+        ? "If you have a problem with the application, follow this order:\n\n1. Check the Frequently Asked Questions (FAQ) section first.\n2. If not resolved, write to theringprivate@gmail.com indicating:\n- Account email\n- ID used in registration\n- Mobile model\n- OS Version\n- Exact description of the error\n\nSupport via email:\ntheringprivate@gmail.com\n\nOfficial networks:\nFacebook: https://www.facebook.com/theringprivate\nInstagram: https://www.instagram.com/theringprivate\n\nIn-person assistance:\nC. del Amparo, 75, Centro, 28012 Madrid"
+        : "Si tienes un problema con la aplicación, sigue este orden:\n\n1. Revisa primero la sección de Preguntas Frecuentes.\n2. Si no se resuelve, escribe a theringprivate@gmail.com indicando:\n- Correo de tu cuenta\n- DNI usado en el registro\n- Modelo de móvil\n- Versión de Android/iOS\n- Descripción exacta del error\n\nSoporte por correo:\ntheringprivate@gmail.com\n\nRedes oficiales:\nFacebook: https://www.facebook.com/theringprivate\nInstagram: https://www.instagram.com/theringprivate\n\nAtención presencial:\nC. del Amparo, 75, Centro, 28012 Madrid";
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
@@ -717,7 +728,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String titulo = isEng ? 'Frequently Asked Questions (FAQ)' : 'Preguntas frecuentes (FAQ)';
     String contenido = isEng
         ? "1. How do I register correctly?\nTap Register, fill in your name, surname, ID, email, and a secure password. You must accept the terms and conditions to finish.\n\n2. What documents are valid for registration?\nValid ID, NIE, or Passport are accepted.\n\n3. I forgot my password. What do I do?\nAt login, tap Forgot your password and follow the email recovery process.\n\n4. The QR is not showing. How do I fix it?\nCheck your internet connection, close and reopen the QR screen, and try again. If it persists, log out and log back in.\n\n5. Can I change my personal data?\nSensitive identification data is managed at reception to verify identity.\n\n6. How do I delete my account?\nIn Settings, go to Delete Account, verify your credentials, and confirm final deletion.\n\n7. What happens to my notifications if I delete them?\nIf you delete a notification in your profile, it stops showing in your account. Other users keep their own notifications independently."
-        : "1. ¿Cómo me registro correctamente?\nPulsa en Registrarse, completa nombre, apellidos, DNI, correo y una contraseña segura. Debes aceptar los términos y condiciones para finalizar.\n\n2. ¿Qué documentos son válidos para el registro?\nSe aceptan DNI, NIE o pasaporte en vigor.\n\n3. He olvidado mi contraseña. ¿Qué hago?\nEn inicio de sesión, pulsa Olvidaste tu contraseña y sigue el proceso de recuperación por correo.\n\n4. El QR no se muestra. ¿Cómo lo soluciono?\nComprueba conexión a internet, cierra y abre la pantalla QR y vuelve a intentarlo. Si persiste, cierra sesión y entra de nuevo.\n\n5. ¿Puedo cambiar mis datos personales?\nLos datos sensibles de identificación se gestionan en recepción para verificar identidad.\n\n6. ¿Cómo elimino mi cuenta?\nEn Ajustes, entra en Eliminar cuenta, verifica tus credenciales y confirma la eliminación final.\n\n7. ¿Qué pasa con mis notificaciones si las elimino?\nSi eliminas una notificación en tu perfil, deja de mostrarse en tu cuenta. Otros usuarios mantienen sus propias notificaciones de forma independiente.";
+        : "1. ¿Cómo me registro correctamente?\nPulsa en Registrarse, completa nombre, apellidos, DNI, correo y una contraseña segura. Debes aceptar los términos y condiciones para finalizar.\n\n2. ¿Qué documentos son válidos para el registro?\nSe aceptan DNI, NIE o pasaporte en vigor.\n\n3. He olvidado mi contraseña. ¿Qué hago?\nEn inicio de sesión, pulsa Olvidaste tu contraseña y sigue el proceso de recuperación por correo.\n\n4. El QR no se muestra. ¿Cómo lo soluciono?\nComprueba conexión a internet, cierra y abre la pantalla QR y vuelve a intentarlo. Si persiste, cierra sesión y entra de nuevo.\n\n5. ¿Puedo cambiar mis datos personales?\nLos datos sensibles de identificación se gestionan en recepción para verificar identidad.\n\n6. ¿Cómo elimino mi cuenta?\nEn Ajustes, entra en Eliminar cuenta, verifica tus credenciales y confirma la eliminación final.\n\n7. ¿Qué pasa con mis notificaciones si las elimino?\nSi eliminas una notificación en profile, deja de mostrarse en tu cuenta. Otros usuarios mantienen sus propias notificaciones de forma independiente.";
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
