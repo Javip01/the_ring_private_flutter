@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'tarifas_screen.dart';
@@ -21,6 +22,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await FirebaseAuth.instance.signOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
+  }
+
+  // --- SOLUCIÓN AL CORREO EN iOS ---
+  void _abrirGmailContacto() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'theringprivate@gmail.com',
+    );
+    try {
+      // Usamos launchUrl directo sin validarlo con canLaunchUrl, para evitar bloqueos del sistema en iOS
+      await launchUrl(emailUri);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("No se pudo abrir tu app de correo. Escríbenos a theringprivate@gmail.com"))
+        );
+      }
+    }
   }
 
   // --- POPUP CONTRASEÑA CON REAUTENTICACIÓN ---
@@ -604,7 +623,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextSpan(text: '• Eliminar cuenta: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'elimina tu acceso y datos asociados tras confirmación final. Esta acción es irreversible.\n\n'),
           TextSpan(text: '9. Soporte\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           TextSpan(text: 'Si tienes un problema técnico, contacta por email en: '),
-          TextSpan(text: 'ringasociacion@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: 'theringprivate@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
           TextSpan(text: '--- \n*The Ring Private - Privacidad y Respeto*', style: TextStyle(fontStyle: FontStyle.italic)),
         ],
       ),
@@ -654,7 +673,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextSpan(text: '• Delete account: ', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: 'permanently delete your access and associated data. This action is irreversible.\n\n'),
           TextSpan(text: '9. Support\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           TextSpan(text: 'If you have a technical problem, contact us by email at: '),
-          TextSpan(text: 'ringasociacion@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: 'theringprivate@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
           TextSpan(text: '--- \n*The Ring Private - Privacy and Respect*', style: TextStyle(fontStyle: FontStyle.italic)),
         ],
       ),
@@ -827,6 +846,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildRow(Icons.close, isEng ? 'DELETE ACCOUNT' : 'ELIMINAR CUENTA', const Color(0xFFFF4C4C), const Color(0xFFFF4C4C), isDestructive: true, onTap: _mostrarDialogoEliminar),
                                 Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
                                 _buildRow(Icons.menu_book, isEng ? 'User Manual' : 'Manual de usuario', iconColor, textColor, onTap: () => _mostrarManual()),
+                                Divider(height: 1, indent: 56, color: isDark ? Colors.grey[900] : Colors.grey[100]),
+                                _buildRow(Icons.mail_outline, 'Contacto: theringprivate@gmail.com', const Color(0xFFA30000), textColor, onTap: _abrirGmailContacto),
                               ],
                             ),
                           ),
@@ -850,7 +871,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Icon(icon, color: iconColor, size: 24),
             const SizedBox(width: 16),
-            Text(text, style: TextStyle(color: textColor, fontSize: 16, fontWeight: isDestructive ? FontWeight.bold : FontWeight.normal)),
+            Expanded(child: Text(text, style: TextStyle(color: textColor, fontSize: 16, fontWeight: isDestructive ? FontWeight.bold : FontWeight.normal))),
+            Icon(Icons.chevron_right, color: Colors.grey[500], size: 18),
           ],
         ),
       ),

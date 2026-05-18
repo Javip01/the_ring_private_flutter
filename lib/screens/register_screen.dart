@@ -26,6 +26,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _hasUppercase = false;
   bool _hasSpecialChar = false;
   String _tipoDocumento = 'DNI/NIE';
+  String? _paisPasaporte = 'España';
+
+  // Lista Completa de Países en Español
+  final List<String> _listaTodosLosPaises = [
+    'Afganistán', 'Albania', 'Alemania', 'Andorra', 'Angola', 'Antigua y Barbuda', 'Arabia Saudita',
+    'Argelia', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaiyán', 'Bahamas', 'Bangladés',
+    'Barbados', 'Baréin', 'Bélgica', 'Belice', 'Benín', 'Bielorrusia', 'Birmania', 'Bolivia',
+    'Bosnia y Herzegovina', 'Botsuana', 'Brasil', 'Brunéi', 'Bulgaria', 'Burkina Faso', 'Burundi',
+    'Bután', 'Cabo Verde', 'Camboya', 'Camerún', 'Canadá', 'Catar', 'Chad', 'Chile', 'China', 'Chipre',
+    'Colombia', 'Comoras', 'Corea del Norte', 'Corea del Sur', 'Costa de Marfil', 'Costa Rica', 'Croacia',
+    'Cuba', 'Dinamarca', 'Dominica', 'Ecuador', 'Egipto', 'El Salvador', 'Emiratos Árabes Unidos',
+    'Eritrea', 'Eslovaquia', 'Eslovenia', 'España', 'Estados Unidos', 'Estonia', 'Etiopía', 'Filipinas',
+    'Finlandia', 'Fiyi', 'Francia', 'Gabón', 'Gambia', 'Georgia', 'Ghana', 'Granada', 'Grecia',
+    'Guatemala', 'Guinea', 'Guinea Ecuatorial', 'Guinea-Bisáu', 'Guyana', 'Haití', 'Honduras', 'Hungría',
+    'India', 'Indonesia', 'Irak', 'Irán', 'Irlanda', 'Islandia', 'Islas Marshall', 'Islas Salomón',
+    'Israel', 'Italia', 'Jamaica', 'Japón', 'Jordania', 'Kazajistán', 'Kenia', 'Kirguistán', 'Kiribati',
+    'Kuwait', 'Laos', 'Lesoto', 'Letonia', 'Líbano', 'Liberia', 'Libia', 'Liechtenstein', 'Lituania',
+    'Luxemburgo', 'Macedonia del Norte', 'Madagascar', 'Malasia', 'Malaui', 'Maldivas', 'Malí', 'Malta',
+    'Marruecos', 'Mauricio', 'Mauritania', 'México', 'Micronesia', 'Moldavia', 'Mónaco', 'Mongolia',
+    'Montenegro', 'Mozambique', 'Namibia', 'Nauru', 'Nepal', 'Nicaragua', 'Níger', 'Nigeria', 'Noruega',
+    'Nueva Zelanda', 'Omán', 'Países Bajos', 'Pakistán', 'Palaos', 'Panamá', 'Papúa Nueva Guinea',
+    'Paraguay', 'Perú', 'Polonia', 'Portugal', 'Reino Unido', 'República Centroafricana', 'República Checa',
+    'República del Congo', 'República Democrática del Congo', 'República Dominicana', 'Ruanda', 'Rumania',
+    'Rusia', 'Samoa', 'San Cristóbal y Nieves', 'San Marino', 'San Vicente y las Granadinas', 'Santa Lucía',
+    'Santo Tomé y Príncipe', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leona', 'Singapur', 'Siria',
+    'Somalia', 'Sri Lanka', 'Suazilandia', 'Sudáfrica', 'Sudán', 'Sudán del Sur', 'Suecia', 'Suiza',
+    'Surinam', 'Tailandia', 'Tanzania', 'Tayikistán', 'Timor Oriental', 'Togo', 'Tonga', 'Trinidad y Tobago',
+    'Túnez', 'Turkmenistán', 'Turquía', 'Tuvalu', 'Ucrania', 'Uganda', 'Uruguay', 'Uzbekistán', 'Vanuatu',
+    'Vaticano', 'Venezuela', 'Vietnam', 'Yemen', 'Yibuti', 'Zambia', 'Zimbabue'
+  ];
 
   bool _validarDNIoNIE(String dnioNie) {
     String dni = dnioNie.toUpperCase().trim();
@@ -37,13 +67,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String numeros = dni.substring(0, dni.length - 1);
     String letraFinal = dni.substring(dni.length - 1);
 
-    if (prefijo == 'X') {
-      numeros = numeros.replaceFirst('X', '0');
-    } else if (prefijo == 'Y') {
-      numeros = numeros.replaceFirst('Y', '1');
-    } else if (prefijo == 'Z') {
-      numeros = numeros.replaceFirst('Z', '2');
-    }
+    if (prefijo == 'X') numeros = numeros.replaceFirst('X', '0');
+    else if (prefijo == 'Y') numeros = numeros.replaceFirst('Y', '1');
+    else if (prefijo == 'Z') numeros = numeros.replaceFirst('Z', '2');
 
     int? numeroEntero = int.tryParse(numeros);
     if (numeroEntero == null) return false;
@@ -96,17 +122,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       String signupEmail = correo.isNotEmpty ? correo : '${documento.toLowerCase()}@thering.local';
 
-      // Creamos la cuenta real en Firebase
       UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: signupEmail, password: password);
       await cred.user?.updateDisplayName(nombre);
 
-      // Extraemos el ID único generado por Firebase (El que sale en tus fotos)
       String uid = cred.user!.uid;
 
-      // 1. Guardamos el Mapeo DNI para los inicios de sesión
       await FirebaseDatabase.instance.ref("MapeoDNI").child(documento).set(signupEmail);
 
-      // 2. Guardamos la información del perfil EXACTAMENTE como aparece en tus capturas
       await FirebaseDatabase.instance.ref("usuarios").child(uid).set({
         "acceptedTerms": _aceptaTerminos,
         "documento": documento,
@@ -114,6 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "name": nombre,
         "surname": apellidos,
         "tipoDocumento": _tipoDocumento,
+        "paisPasaporte": _tipoDocumento == 'PASAPORTE' ? _paisPasaporte : null,
         "bloqueado": false,
         "taquilla_actual": "",
         "fecha_asignacion_taquilla": "",
@@ -130,6 +153,193 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  // --- POPUP BUSCADOR DE PAÍSES ---
+  void _mostrarDialogoPaises(Color bgColor, Color textColor) {
+    TextEditingController searchController = TextEditingController();
+    List<String> paisesFiltrados = List.from(_listaTodosLosPaises);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return Dialog(
+              backgroundColor: bgColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      controller: searchController,
+                      style: TextStyle(color: textColor),
+                      decoration: InputDecoration(
+                        hintText: "Buscar país...",
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                        filled: true,
+                        fillColor: bgColor == Colors.white ? Colors.grey[200] : const Color(0xFF2A2A2A),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                      ),
+                      onChanged: (value) {
+                        setStateModal(() {
+                          paisesFiltrados = _listaTodosLosPaises
+                              .where((pais) => pais.toLowerCase().contains(value.toLowerCase()))
+                              .toList();
+                        });
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: paisesFiltrados.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Text(paisesFiltrados[index], style: TextStyle(color: textColor)),
+                          onTap: () {
+                            setState(() {
+                              _paisPasaporte = paisesFiltrados[index];
+                            });
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- POPUP IDIOMA ---
+  void _mostrarDialogoIdioma() {
+    showDialog(
+      context: context,
+      builder: (context) => ValueListenableBuilder<ThemeMode>(
+          valueListenable: TheRingPrivateApp.themeNotifier,
+          builder: (context, currentTheme, _) {
+            return ValueListenableBuilder<bool>(
+                valueListenable: TheRingPrivateApp.isEnglishNotifier,
+                builder: (context, isEng, _) {
+                  bool isDark = currentTheme == ThemeMode.dark;
+                  return Dialog(
+                    backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
+                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.translate, color: Color(0xFFA30000), size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(isEng ? 'LANGUAGE' : 'IDIOMA', style: const TextStyle(color: Color(0xFFA30000), fontWeight: FontWeight.bold, fontSize: 14)),
+                                ],
+                              ),
+                              IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: () => Navigator.pop(context))
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = false,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(color: !isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent, borderRadius: const BorderRadius.all(Radius.circular(12))),
+                                    child: Center(child: Text('🇪🇸 ES', style: TextStyle(color: !isEng ? const Color(0xFFA30000) : (isDark ? Colors.white : Colors.black), fontSize: 16, fontWeight: FontWeight.bold))),
+                                  ),
+                                ),
+                              ),
+                              Container(height: 30, width: 1, color: isDark ? Colors.grey[800] : Colors.grey[300]),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => TheRingPrivateApp.isEnglishNotifier.value = true,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(color: isEng ? const Color(0xFFA30000).withOpacity(0.1) : Colors.transparent, borderRadius: const BorderRadius.all(Radius.circular(12))),
+                                    child: Center(child: Text('🇬🇧 EN', style: TextStyle(color: isEng ? const Color(0xFFA30000) : (isDark ? Colors.white : Colors.black), fontSize: 16, fontWeight: FontWeight.bold))),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  );
+                }
+            );
+          }
+      ),
+    );
+  }
+
+  // --- POPUP MANUAL ---
+  void _mostrarManual() {
+    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+    bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
+    final bgColor = isDark ? const Color(0xFF161616) : const Color(0xFFF9F9F9);
+    final textColor = isDark ? Colors.white : Colors.black87;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: bgColor,
+        insetPadding: const EdgeInsets.all(20),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: Text(isEng ? 'User Manual' : 'Manual de Usuario', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor))),
+                  IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: () => Navigator.pop(context))
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: isEng ? _buildManualTextEN(textColor) : _buildManualTextES(textColor),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA30000),
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _mostrarTerminos(bool isEng, bool isDark) {
     String titulo = isEng ? 'Terms and Conditions' : 'Términos y Condiciones';
     String contenido = isEng
@@ -143,10 +353,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              top: 24, left: 24, right: 24
-          ),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 20, top: 24, left: 24, right: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,23 +368,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.65,
-                child: SingleChildScrollView(
-                  child: Text(contenido, style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 15, height: 1.5)),
-                ),
+                child: SingleChildScrollView(child: Text(contenido, style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 15, height: 1.5))),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFA30000),
-                  minimumSize: const Size(double.infinity, 55),
-                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), minimumSize: const Size(double.infinity, 55), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12)))),
                 onPressed: () => Navigator.pop(context),
                 child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
               )
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildManualTextES(Color textColor) {
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(color: textColor, fontSize: 15, height: 1.5),
+        children: const [
+          TextSpan(text: 'Bienvenido a la aplicación oficial de '),
+          TextSpan(text: 'The Ring Private', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: '. Esta guía explica cada paso para que puedas usar la app sin dudas.\n\n'),
+          TextSpan(text: '1. Registro de cuenta\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Pulsa '), TextSpan(text: 'Registrarse', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' en la pantalla inicial.\n'),
+          TextSpan(text: '2. Introduce: nombre, apellidos, DNI/NIE/Pasaporte, correo electrónico y contraseña.\n'),
+          TextSpan(text: '3. La contraseña debe tener mínimo 6 caracteres, 1 mayúscula y 1 símbolo especial.\n'),
+          TextSpan(text: '4. Marca la casilla de aceptación de términos y condiciones.\n'),
+          TextSpan(text: '5. Pulsa '), TextSpan(text: 'Registrarse', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' para completar el alta.\n\n'),
+          TextSpan(text: '2. Inicio de sesión\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Introduce tu correo o DNI y tu contraseña.\n'),
+          TextSpan(text: '2. Pulsa '), TextSpan(text: 'Iniciar sesión', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: '.\n'),
+          TextSpan(text: '3. Si olvidaste tu contraseña, pulsa '), TextSpan(text: '¿Olvidaste tu contraseña?', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' y sigue el proceso de recuperación dentro de la app.\n\n'),
+          TextSpan(text: '3. Soporte\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'Si tienes un problema técnico, contacta por email en: '),
+          TextSpan(text: 'theringprivate@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualTextEN(Color textColor) {
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(color: textColor, fontSize: 15, height: 1.5),
+        children: const [
+          TextSpan(text: 'Welcome to the official '),
+          TextSpan(text: 'The Ring Private', style: TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: ' app. This guide explains every step so you can use the app without any doubts.\n\n'),
+          TextSpan(text: '1. Account Registration\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Tap '), TextSpan(text: 'Register', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' on the initial screen.\n'),
+          TextSpan(text: '2. Enter: name, surnames, ID/Passport, email, and password.\n'),
+          TextSpan(text: '3. Password must have a minimum of 6 characters, 1 uppercase, and 1 special symbol.\n'),
+          TextSpan(text: '4. Check the terms and conditions acceptance box.\n'),
+          TextSpan(text: '5. Tap '), TextSpan(text: 'Register', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' to complete the sign-up.\n\n'),
+          TextSpan(text: '2. Login\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: '1. Enter your email or ID and your password.\n'),
+          TextSpan(text: '2. Tap '), TextSpan(text: 'Login', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: '.\n'),
+          TextSpan(text: '3. If you forgot your password, tap '), TextSpan(text: 'Forgot your password?', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' and follow the recovery process.\n\n'),
+          TextSpan(text: '3. Support\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          TextSpan(text: 'If you have a technical problem, contact us by email at: '),
+          TextSpan(text: 'theringprivate@gmail.com\n\n', style: TextStyle(fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
@@ -247,6 +500,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     _buildRingInput(_apellidosController, isEng ? 'Surnames' : 'Apellidos', false, textColor, borderColor, cardBgColor),
                                     const SizedBox(height: 16),
 
+                                    // SELECTOR DE DOCUMENTO
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                                       decoration: BoxDecoration(
@@ -277,6 +531,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 16),
+
+                                    // SELECTOR DE PAÍS CON POP-UP (Para Pasaporte)
+                                    if (_tipoDocumento == 'PASAPORTE') ...[
+                                      InkWell(
+                                        onTap: () => _mostrarDialogoPaises(cardBgColor, textColor),
+                                        borderRadius: BorderRadius.circular(30),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                          decoration: BoxDecoration(
+                                            color: cardBgColor,
+                                            borderRadius: BorderRadius.circular(30),
+                                            border: Border.all(color: borderColor),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(_paisPasaporte ?? (isEng ? 'Select country' : 'Selecciona un país'), style: TextStyle(color: textColor, fontSize: 16)),
+                                              Icon(Icons.arrow_drop_down, color: textColor),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
 
                                     TextField(
                                       controller: _dniController,
@@ -375,9 +653,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 24),
-                                    GestureDetector(
-                                      onTap: () => Navigator.pop(context),
-                                      child: Text(isEng ? 'Already have an account? Login' : '¿Ya tienes cuenta? Inicia sesión', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
+
+                                    // FILA INFERIOR: IDIOMA Y MANUAL
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        InkWell(
+                                          onTap: _mostrarDialogoIdioma,
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.translate, color: Color(0xFFA30000), size: 18),
+                                              const SizedBox(width: 6),
+                                              Text(isEng ? '🇬🇧 EN' : '🇪🇸 ES', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(width: 1, height: 20, color: borderColor),
+                                        InkWell(
+                                          onTap: _mostrarManual,
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.menu_book, color: Colors.grey, size: 18),
+                                              const SizedBox(width: 6),
+                                              Text(isEng ? 'Manual' : 'Manual', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -385,13 +687,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             Positioned(
                               top: -10,
-                              child: Image.asset(
-                                  logoPath,
-                                  width: 150,
-                                  height: 100,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50)
-                              ),
+                              child: Image.asset(logoPath, width: 150, height: 100, fit: BoxFit.contain, errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50)),
                             ),
                           ],
                         ),
