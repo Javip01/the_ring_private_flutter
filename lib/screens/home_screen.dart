@@ -64,14 +64,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Map<String, dynamic>? _userProfileData;
   String _qrSessionNonce = "";
 
-  // Variables de Notificaciones (Escucha Dual y Estado de Expansión)
+  // Variables de Notificaciones
   List<Notificacion> _notifGlobales = [];
   List<Notificacion> _notifPersonales = [];
   List<Notificacion> _todasLasNotificaciones = [];
   List<Notificacion> _notificacionesVisibles = [];
   Set<String> _notificacionesEliminadas = {};
   Set<String> _notificacionesLeidas = {};
-  bool _isExpanded = false; // Estado para controlar si el panel está expandido
+  bool _isExpanded = false;
 
   StreamSubscription? _globalSubscription;
   StreamSubscription? _personalSubscription;
@@ -385,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       const SizedBox(height: 24),
                       Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 1),
                       const SizedBox(height: 12),
-                      Text(isEng ? 'ADDITIONAL REMINDERS' : 'RECORDATORIOS ADICONDALES', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      Text(isEng ? 'ADDITIONAL REMINDERS' : 'RECORDATORIOS ADICIONALES', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                       const SizedBox(height: 12),
                       Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 1),
                       const SizedBox(height: 16),
@@ -520,6 +520,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     const Color rojoRing = Color(0xFFA30000);
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+
+    // VARIABLES RESPONSIVE BASADAS EN LA PANTALLA DEL DISPOSITIVO
+    final size = MediaQuery.of(context).size;
     final double topPadding = MediaQuery.of(context).padding.top;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -531,9 +534,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ? 'lib/assets/logo_the_ring_transparente.png'
         : 'lib/assets/logo_the_ring_transparente_negro.png';
 
-    // Definimos las alturas máximas para los estados
-    final double maxCollapsedHeight = 130.0; // Un poco más de la mitad para ver 1.5 notifs
-    final double maxExpandedHeight = 320.0;  // Un poco más grande que el original
+    // Alturas relativas (proporcionales a la pantalla pero con límites para no romper el diseño)
+    final double logoHeight = size.height * 0.23;
+    final double buttonHeight = size.height * 0.14 > 120 ? 120 : size.height * 0.14;
+
+    // Alturas colapsadas/expandidas de las notificaciones
+    final double maxCollapsedHeight = math.max(130.0, size.height * 0.15); // Un poco más de la mitad
+    final double maxExpandedHeight = math.max(320.0, size.height * 0.38);
 
     return Scaffold(
       backgroundColor: scaffoldBgColor,
@@ -541,7 +548,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           Positioned.fill(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 140),
+              padding: EdgeInsets.only(bottom: size.height * 0.15), // Padding dinámico inferior
               physics: const BouncingScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -571,8 +578,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
 
+                  // LOGO RESPONSIVE
                   Container(
-                    height: 200,
+                    height: logoHeight,
                     width: double.infinity,
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
@@ -581,16 +589,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 10))],
                     ),
                     alignment: Alignment.center,
-                    child: Image.asset(logoPath, height: 150, fit: BoxFit.contain, errorBuilder: (_,__,___) => Icon(Icons.image, color: isDark ? Colors.white : Colors.black, size: 50)),
+                    child: Image.asset(logoPath, height: logoHeight * 0.75, fit: BoxFit.contain, errorBuilder: (_,__,___) => Icon(Icons.image, color: isDark ? Colors.white : Colors.black, size: 50)),
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: size.height * 0.02),
+
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Text(isEng ? 'NOTIFICATIONS' : 'NOTIFICACIONES', style: const TextStyle(color: rojoRing, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.8)),
                   ),
 
-                  // CONTENEDOR DE NOTIFICACIONES CON EXPANSIÓN Y PADDING REDUCIDO
+                  // CAJA DE NOTIFICACIONES
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     width: double.infinity,
@@ -608,8 +617,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         BoxShadow(color: Colors.white.withOpacity(0.8), blurRadius: 2, offset: const Offset(-2, -2))
                       ],
                     ),
-                    // PADDING REDUCIDO A 8 (ANTES 16)
-                    padding: const EdgeInsets.all(8),
+                    // PADDING REDUCIDO Y MÁS COMPACTO
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                     child: _notificacionesVisibles.isEmpty
                         ? Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -617,22 +626,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     )
                         : Column(
                       children: [
-                        // Usamos AnimatedSize para una transición suave entre alturas
                         AnimatedSize(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
                           child: Container(
-                            // Asignamos la altura máxima según el estado de expansión
+                            // Altura dinámica: Colapsado (pequeño) vs Expandido
                             constraints: BoxConstraints(
                               maxHeight: _isExpanded ? maxExpandedHeight : maxCollapsedHeight,
                             ),
-                            // ListView permite scroll interno siempre
                             child: ListView.separated(
+                              // ELIMINA EL HUECO SUPERIOR AUTOMÁTICO DE LISTVIEW
+                              padding: EdgeInsets.zero,
                               shrinkWrap: true,
-                              physics: const BouncingScrollPhysics(), // Scroll suave interno activo
+                              physics: const BouncingScrollPhysics(),
                               itemCount: _notificacionesVisibles.length,
-                              // SEPARADOR REDUCIDO A 10 (ANTES 20)
-                              separatorBuilder: (context, index) => Divider(color: isDark ? Colors.grey[800] : const Color(0xFFF1F1F1), height: 10),
+                              // SEPARADOR MÁS FINO PARA QUE ESTÉN MÁS JUNTAS
+                              separatorBuilder: (context, index) => Divider(color: isDark ? Colors.grey[800] : const Color(0xFFF1F1F1), height: 8),
                               itemBuilder: (context, index) {
                                 final notif = _notificacionesVisibles[index];
                                 return InkWell(
@@ -640,12 +649,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   child: Opacity(
                                     opacity: notif.leida ? 0.6 : 1.0,
                                     child: Padding(
-                                      // Padding vertical interno también reducido
-                                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                      // Padding interno muy fino
+                                      padding: const EdgeInsets.symmetric(vertical: 2.0),
                                       child: Row(
                                         children: [
                                           Icon(notif.tipo == 'mensaje' ? Icons.chat_bubble_outline : Icons.info_outline, color: notif.tipo == 'mensaje' ? const Color(0xFF4287F5) : const Color(0xFFA30000), size: 22),
-                                          const SizedBox(width: 10), // Un poco menos de espacio
+                                          const SizedBox(width: 10),
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,11 +675,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             ),
                           ),
                         ),
-                        // BOTÓN DE EXPANDIR/CONTRAER RECUPERADO
+                        // BOTÓN EXPANDIR (Aparece si hay más de 1 notificación)
                         if (_notificacionesVisibles.length > 1 || _isExpanded) ...[
                           Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Divider(color: isDark ? Colors.grey[800] : const Color(0xFFF1F1F1), height: 8,),
+                            padding: const EdgeInsets.only(top: 2.0),
+                            child: Divider(color: isDark ? Colors.grey[800] : const Color(0xFFF1F1F1), height: 4),
                           ),
                           GestureDetector(
                             onTap: () => setState(() => _isExpanded = !_isExpanded),
@@ -699,14 +708,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  SizedBox(height: size.height * 0.03),
 
+                  // BOTONES INFERIORES RESPONSIVE
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
-                        Expanded(child: _buildHomeSquareButton(isEng ? 'PROFILE' : 'PERFIL', Icons.person, cardBgColor, textColor, isDark, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())))),
-                        Expanded(child: _buildHomeSquareButton(isEng ? 'RULES' : 'NORMAS', Icons.assignment, cardBgColor, textColor, isDark, () => _mostrarNormas(isEng, isDark))),
+                        Expanded(child: _buildHomeSquareButton(isEng ? 'PROFILE' : 'PERFIL', Icons.person, cardBgColor, textColor, isDark, buttonHeight, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())))),
+                        Expanded(child: _buildHomeSquareButton(isEng ? 'RULES' : 'NORMAS', Icons.assignment, cardBgColor, textColor, isDark, buttonHeight, () => _mostrarNormas(isEng, isDark))),
                       ],
                     ),
                   ),
@@ -744,7 +754,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-      // MANTENEMOS EL BOTÓN QR GRANDE Y DESTACO (80x80 pixels)
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: SizedBox(
         width: 80,
@@ -760,7 +769,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildHomeSquareButton(String title, IconData icon, Color bgColor, Color textColor, bool isDark, VoidCallback onTap) {
+  Widget _buildHomeSquareButton(String title, IconData icon, Color bgColor, Color textColor, bool isDark, double height, VoidCallback onTap) {
     return Card(
       margin: const EdgeInsets.all(8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -771,7 +780,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: SizedBox(
-          height: 120,
+          height: height,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
