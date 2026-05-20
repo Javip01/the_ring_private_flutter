@@ -481,7 +481,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _mostrarBottomSheetLegal(String titulo, String contenido) {
+  // --- MODIFICADO para aceptar Widget ---
+  void _mostrarBottomSheetLegal(String titulo, Widget contenidoWidget) {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
 
@@ -511,7 +512,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.65,
                 child: SingleChildScrollView(
-                  child: Text(contenido, style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 15, height: 1.5)),
+                  child: contenidoWidget,  // Ahora es un Widget
                 ),
               ),
               const SizedBox(height: 24),
@@ -691,45 +692,321 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ================= TEXTOS LEGALES Y DE AYUDA =================
+  // ================= TEXTOS LEGALES Y DE AYUDA (MODIFICADOS CON RICH TEXT) =================
+
+  // ----- TARIFAS -----
   void _abrirTarifas(bool isEng) {
-    String titulo = isEng ? 'How to become a member and tariffs' : 'Cómo hacerse socio y tarifas';
-    String contenido = isEng
-        ? "How to become a member\n1. Go to reception and request membership.\n2. Fill out and sign the form with your real data.\n3. Expressly accept the club's internal rules.\n4. Download the app and complete registration with the same ID document.\n5. The first validation is done in person at reception.\n\nMembership Status\nOnly those who have paid the current fee are considered active members. If the fee expires, membership is suspended until renewed.\n\nAdvantages of being a member\n- Faster access via QR identification.\n- Personal account registration to manage notifications and settings.\n- Use of lockers subject to availability and club conditions.\n- Access to additional benefits at special events, when announced.\n\nCurrent tariffs\nOne-day member:\n- Friday: 15 EUR\n- Saturday: 15 EUR\n\nVIP Fees:\n- VIP Member 1 month: 90 EUR\n- VIP Member 6 months: 250 EUR\n\nTariffs may be updated. In case of change, the current version will be published at reception and in the application."
-        : "Cómo hacerse socio\n1. Acude a recepción y solicita el alta de socio.\n2. Rellena y firma la hoja de alta con tus datos reales.\n3. Acepta expresamente las normas internas del club.\n4. Descarga la aplicación y completa tu registro con el mismo documento de identidad.\n5. La primera validación se realiza presencialmente en recepción.\n\nCondición de socio\nSolo se considera socio activo a quien haya abonado la cuota vigente. Si la cuota caduca, la condición de socio queda suspendida hasta la renovación.\n\nVentajas de ser socio\n- Acceso más ágil mediante identificación con QR.\n- Registro de cuenta personal para gestionar notificaciones y ajustes.\n- Uso de taquilla según disponibilidad y condiciones del club.\n- Acceso a ventajas adicionales en eventos especiales, cuando se anuncien.\n\nTarifas vigentes\nSocio por un día:\n- Viernes: 15 EUR\n- Sábado: 15 EUR\n\nCuotas VIP:\n- Socio VIP 1 mes: 90 EUR\n- Socio VIP 6 meses: 250 EUR\n\nLas tarifas pueden actualizarse. En caso de cambio, se publicará la versión vigente en recepción y en la aplicación.";
+    String titulo = isEng ? 'How to become a member and tariffs' : '¿Cómo hacerse socio y cuáles son las tarifas?';
+    Widget contenido = isEng ? _buildTarifasEN() : _buildTarifasES();
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
+  Widget _buildTarifasES() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: '1. ¿Cómo hacerse socio?\n', style: bold),
+        TextSpan(text: '• Acude a recepción y solicita el alta de socio.\n', style: normal),
+        TextSpan(text: '• Rellena y firma la hoja de alta con tus datos reales.\n', style: normal),
+        TextSpan(text: '• Acepta expresamente las normas internas del club.\n', style: normal),
+        TextSpan(text: '• Descarga la aplicación o completa tu registro con el mismo documento de identidad.\n', style: normal),
+        TextSpan(text: '• La primera validación se realiza presencialmente en recepción.\n\n', style: normal),
+        TextSpan(text: '2. ¿Cuándo soy considerado socio activo?\n', style: bold),
+        TextSpan(text: 'Solo se considera socio activo a quien haya abonado la cuota vigente. Si la cuota caduca, la condición de socio queda suspendida hasta la renovación.\n\n', style: normal),
+        TextSpan(text: '3. ¿Cuáles son las ventajas de tener la aplicación?\n', style: bold),
+        TextSpan(text: '• Acceso más ágil mediante identificación con QR.\n', style: normal),
+        TextSpan(text: '• Cuenta personal para gestionar notificaciones y ajustes.\n', style: normal),
+        TextSpan(text: '• Uso de taquilla según disponibilidad y condiciones del club.\n', style: normal),
+        TextSpan(text: '• Acceso a ventajas adicionales en eventos especiales.\n\n', style: normal),
+        TextSpan(text: '4. Cuotas de socio\n\n', style: bold),
+        TextSpan(text: 'Entrada general:\n', style: bold),
+        TextSpan(text: '• 15 EUR\n\n', style: normal),
+        TextSpan(text: 'Eventos especiales:\n', style: bold),
+        TextSpan(text: '• 20 EUR\n\n', style: normal),
+        TextSpan(text: 'Cuotas VIP:\n', style: bold),
+        TextSpan(text: '• Socio VIP 1 mes: 90 EUR\n', style: normal),
+        TextSpan(text: '• Socio VIP 6 meses: 250 EUR\n\n', style: normal),
+        TextSpan(text: '5. ¿Cambian las tarifas?\n', style: bold),
+        TextSpan(text: 'Las tarifas pueden actualizarse. En caso de cambio, se publicará la versión vigente en recepción y en la aplicación.', style: normal),
+      ]),
+    );
+  }
+
+  Widget _buildTarifasEN() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: '1. How to become a member?\n', style: bold),
+        TextSpan(text: '• Go to reception and request membership.\n', style: normal),
+        TextSpan(text: '• Fill out and sign the form with your real data.\n', style: normal),
+        TextSpan(text: '• Expressly accept the club\'s internal rules.\n', style: normal),
+        TextSpan(text: '• Download the app or complete registration with the same ID document.\n', style: normal),
+        TextSpan(text: '• The first validation is done in person at reception.\n\n', style: normal),
+        TextSpan(text: '2. When am I considered an active member?\n', style: bold),
+        TextSpan(text: 'Only those who have paid the current fee are considered active members. If the fee expires, membership is suspended until renewed.\n\n', style: normal),
+        TextSpan(text: '3. What are the advantages of having the app?\n', style: bold),
+        TextSpan(text: '• Faster access via QR identification.\n', style: normal),
+        TextSpan(text: '• Personal account to manage notifications and settings.\n', style: normal),
+        TextSpan(text: '• Use of lockers subject to availability and club conditions.\n', style: normal),
+        TextSpan(text: '• Access to additional benefits at special events.\n\n', style: normal),
+        TextSpan(text: '4. Membership fees\n\n', style: bold),
+        TextSpan(text: 'General Admission:\n', style: bold),
+        TextSpan(text: '• 15 EUR\n\n', style: normal),
+        TextSpan(text: 'Special events:\n', style: bold),
+        TextSpan(text: '• 20 EUR\n\n', style: normal),
+        TextSpan(text: 'VIP Fees:\n', style: bold),
+        TextSpan(text: '• VIP Member 1 month: 90 EUR\n', style: normal),
+        TextSpan(text: '• VIP Member 6 months: 250 EUR\n\n', style: normal),
+        TextSpan(text: '5. Do the tariffs change?\n', style: bold),
+        TextSpan(text: 'Tariffs may be updated. In case of change, the current version will be published at reception and in the application.', style: normal),
+      ]),
+    );
+  }
+
+  // ----- TÉRMINOS Y CONDICIONES -----
   void _abrirTerminos(bool isEng) {
     String titulo = isEng ? 'Terms and Conditions' : 'Términos y Condiciones';
-    String contenido = isEng
-        ? "These Terms and Conditions regulate the download, access, and use of the THE RING PRIVATE application (hereinafter, the Application). Access and use imply express acceptance of these conditions.\n\n1. Object\nThe Application aims to manage member identification, facilitate internal notices, and improve the club access experience. Its use is personal and non-transferable.\n\n2. User Registration\nTo create an account, the user must provide real and valid data (name, surname, ID, and email). The user is responsible for keeping their password safe and not sharing it.\n\n3. Rules of Use\nThe user agrees to use the Application lawfully and respectfully. It is prohibited to manipulate, copy, decompile, alter, or reuse the Application's content without express authorization.\n\n4. Intellectual Property\nAll intellectual and industrial property rights over the Application belong to THE RING PRIVATE or authorized third parties.\n\n5. Data Protection\nPersonal data will be processed according to the GDPR and current Spanish regulations. The user can exercise their rights of access, rectification, deletion, opposition, limitation, and portability by contacting the entity.\n\n6. Availability and Responsibility\nTHE RING PRIVATE may update, modify, or suspend the Application for technical or legal reasons. Absolute availability is not guaranteed.\n\n7. Account Deletion\nThe user can request account deletion from the settings section. This action eliminates access and associated data in enabled systems, except for legal retention obligations.\n\n8. Applicable Legislation\nThese conditions are governed by Spanish law. Any controversy will be submitted to the competent courts and tribunals of Madrid, unless a mandatory legal provision states otherwise."
-        : "Estos Términos y Condiciones regulan la descarga, el acceso y el uso de la aplicación THE RING PRIVATE (en adelante, la Aplicación). El acceso y uso de la Aplicación implica la aceptación expresa de estas condiciones.\n\n1. Objeto\nLa Aplicación tiene como finalidad gestionar la identificación de socios, facilitar la comunicación de avisos internos y mejorar la experiencia de acceso al club. Su uso es personal e intransferible.\n\n2. Registro de usuario\nPara crear una cuenta, el usuario debe facilitar datos reales y vigentes (nombre, apellidos, documento de identidad y correo electrónico). El usuario es responsable de custodiar su contraseña y de no compartirla con terceros.\n\n3. Normas de uso\nEl usuario se compromete a utilizar la Aplicación de forma lícita, respetuosa y conforme a la normativa aplicable. Queda prohibido manipular, copiar, descompilar, alterar o reutilizar el contenido de la Aplicación sin autorización expresa.\n\n4. Propiedad intelectual\nTodos los derechos de propiedad intelectual e industrial sobre la Aplicación, su diseño, textos, marcas y elementos gráficos pertenecen a THE RING PRIVATE o a terceros autorizados.\n\n5. Protección de datos\nLos datos personales se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) y la normativa española vigente. El tratamiento se realiza para gestionar la relación con el socio y el funcionamiento de la Aplicación. El usuario puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad mediante contacto con la entidad.\n\n6. Disponibilidad y responsabilidad\nTHE RING PRIVATE podrá actualizar, modificar o suspender la Aplicación por motivos técnicos, legales o de mantenimiento. Aunque se aplican medidas de seguridad, no se garantiza la disponibilidad absoluta ni la ausencia total de errores técnicos.\n\n7. Baja y eliminación de cuenta\nEl usuario puede solicitar la eliminación de su cuenta desde la sección de ajustes. Esta acción elimina el acceso y los datos asociados en los sistemas habilitados, salvo obligación legal de conservación.\n\n8. Legislación aplicable\nEstas condiciones se rigen por la legislación española. Cualquier controversia se someterá a los juzgados y tribunales competentes de Madrid, salvo disposición legal imperativa en contrario.";
+    Widget contenido = isEng ? _buildTerminosEN() : _buildTerminosES();
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
+  Widget _buildTerminosES() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: 'Términos y Condiciones\n\n', style: bold),
+        TextSpan(text: 'Estos Términos y Condiciones regulan la descarga, el acceso y el uso de la Aplicación THE RING PRIVATE (en adelante, la Aplicación). El acceso y uso de la Aplicación implica la aceptación expresa de estas condiciones.\n\n', style: normal),
+        TextSpan(text: '1. ¿Cuál es el objeto de la Aplicación?\n', style: bold),
+        TextSpan(text: 'La Aplicación tiene como finalidad gestionar la identificación de socios, facilitar la comunicación de avisos internos y mejorar la experiencia de acceso al club. Su uso es personal e intransferible.\n\n', style: normal),
+        TextSpan(text: '2. ¿Cómo me registro?\n', style: bold),
+        TextSpan(text: 'Para crear una cuenta, el usuario debe facilitar datos reales y vigentes (Nombre, Apellidos, Documento de identidad y Correo electrónico). El usuario es responsable de custodiar su contraseña y de no compartirla con terceros.\n\n', style: normal),
+        TextSpan(text: '3. ¿Cuáles son las normas de uso?\n', style: bold),
+        TextSpan(text: 'El usuario se compromete a utilizar la Aplicación de forma lícita, respetuosa y conforme a la normativa aplicable. Queda prohibido manipular, copiar, descompilar, alter o reutilizar el contenido de la Aplicación sin autorización expresa.\n\n', style: normal),
+        TextSpan(text: '4. ¿Quién es dueño de la Aplicación?\n', style: bold),
+        TextSpan(text: 'Todos los derechos de propiedad intelectual e industrial sobre la Aplicación, su diseño, textos, marcas y elementos gráficos pertenecen a THE RING PRIVATE o a terceros autorizados.\n\n', style: normal),
+        TextSpan(text: '5. ¿Cómo se protegen mis datos personales?\n', style: bold),
+        TextSpan(text: 'Los datos personales se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) y la normativa española vigente. El tratamiento se realiza para gestionar la relación con el socio y el funcionamiento de la Aplicación.\n\n', style: normal),
+        TextSpan(text: 'El usuario puede ejercer sus derechos de Acceso, Rectificación, Supresión, Oposición, Limitación y Portabilidad mediante contacto con la entidad.\n\n', style: normal),
+        TextSpan(text: '6. ¿Qué garantía tiene la Aplicación?\n', style: bold),
+        TextSpan(text: 'THE RING PRIVATE podrá actualizar, modificar o suspender la Aplicación por motivos técnicos, legales o de mantenimiento. Aunque se aplican medidas de seguridad, no se garantiza la disponibilidad absoluta ni la ausencia total de errores técnicos.\n\n', style: normal),
+        TextSpan(text: '7. ¿Puedo borrar mi cuenta?\n', style: bold),
+        TextSpan(text: 'El usuario puede solicitar la eliminación de su cuenta desde la sección de Ajustes. Esta acción elimina el acceso y los datos asociados en los sistemas habilitados, salvo obligación legal de conservación.\n\n', style: normal),
+        TextSpan(text: '8. ¿Qué ley se aplica?\n', style: bold),
+        TextSpan(text: 'Estas condiciones se rigen por la legislación española. Cualquier controversia se someterá a los juzgados y tribunales competentes de Madrid, salvo disposición legal imperativa en contrario.', style: normal),
+      ]),
+    );
+  }
+
+  Widget _buildTerminosEN() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: 'Terms and Conditions\n\n', style: bold),
+        TextSpan(text: 'These Terms and Conditions regulate the download, access, and use of the THE RING PRIVATE application (hereinafter, the Application). Access and use imply express acceptance of these conditions.\n\n', style: normal),
+        TextSpan(text: '1. What is the purpose of the Application?\n', style: bold),
+        TextSpan(text: 'The Application aims to manage member identification, facilitate internal notices, and improve the club access experience. Its use is personal and non-transferable.\n\n', style: normal),
+        TextSpan(text: '2. How do I register?\n', style: bold),
+        TextSpan(text: 'To create an account, the user must provide real and valid data (Name, Surname, ID, and Email). The user is responsible for keeping their password safe and not sharing it.\n\n', style: normal),
+        TextSpan(text: '3. What are the rules of use?\n', style: bold),
+        TextSpan(text: 'The user agrees to use the Application lawfully and respectfully. It is prohibited to manipulate, copy, decompile, alter, or reuse the Application\'s content without express authorization.\n\n', style: normal),
+        TextSpan(text: '4. Who owns the Application?\n', style: bold),
+        TextSpan(text: 'All intellectual and industrial property rights over the Application belong to THE RING PRIVATE or authorized third parties.\n\n', style: normal),
+        TextSpan(text: '5. How are my personal data protected?\n', style: bold),
+        TextSpan(text: 'Personal data will be processed according to the GDPR and current Spanish regulations. The processing is done to manage the relationship with the member and the operation of the Application.\n\n', style: normal),
+        TextSpan(text: 'The user can exercise their rights of Access, Rectification, Deletion, Opposition, Limitation, and Portability by contacting the entity.\n\n', style: normal),
+        TextSpan(text: '6. What guarantee does the Application have?\n', style: bold),
+        TextSpan(text: 'THE RING PRIVATE may update, modify, or suspend the Application for technical or legal reasons. Although security measures are applied, absolute availability or total absence of technical errors is not guaranteed.\n\n', style: normal),
+        TextSpan(text: '7. Can I delete my account?\n', style: bold),
+        TextSpan(text: 'The user can request account deletion from the Settings section. This action eliminates access and associated data in enabled systems, except for legal retention obligations.\n\n', style: normal),
+        TextSpan(text: '8. Which law applies?\n', style: bold),
+        TextSpan(text: 'These conditions are governed by Spanish law. Any controversy will be submitted to the competent courts and tribunals of Madrid, unless a mandatory legal provision states otherwise.', style: normal),
+      ]),
+    );
+  }
+
+  // ----- AVISO LEGAL -----
   void _abrirAvisoLegal(bool isEng) {
     String titulo = isEng ? 'Legal Notice' : 'Aviso legal';
-    String contenido = isEng
-        ? "1. Identification of the controller\nThe data controller is THE RING PRIVATE.\nAddress: C. del Amparo, 75, Centro, 28012 Madrid.\nContact email: ringasociacion@gmail.com\n\n2. Processed data\nWe process the necessary data to manage your registration and your access as a member: name, surnames, email and identity document.\n\n3. Purpose\nThe main purpose is to manage the relationship with the member, their access to the club and internal service communications.\n\n4. Legal basis\nThe legal basis of the processing is the consent of the user and the execution of the associative relationship.\n\n5. Retention\nThe data will be kept as long as there is an active relationship with the member or during the applicable legal periods.\n\n6. Rights\nYou can exercise your rights of access, rectification, deletion, opposition, limitation and portability upon request to the contact email.\n\n7. Security\nWe apply reasonable technical and organizational measures to prevent unauthorized access, loss or alteration of data.\n\n8. Changes to the legal notice\nThis notice may be updated due to regulatory changes or service improvements. The current version will always be available in the application.\n\nDate of last update: 17/04/2026"
-        : "1. Identificación del responsable\nEl responsable del tratamiento es THE RING PRIVATE.\nDirección: C. del Amparo, 75, Centro, 28012 Madrid.\nCorreo de contacto: ringasociacion@gmail.com\n\n2. Datos tratados\nTratamos los datos necesarios para gestionar tu alta y tu acceso como socio: nombre, apellidos, correo electrónico y documento de identidad.\n\n3. Finalidad\nLa finalidad principal es gestionar la relación con el socio, su acceso al club y las comunicaciones internas de servicio.\n\n4. Base jurídica\nLa base legal del tratamiento es el consentimiento del usuario y la ejecución de la relación asociativa.\n\n5. Conservación\nLos datos se conservarán mientras exista relación activa con el socio o durante los plazos legales aplicables.\n\n6. Derechos\nPuedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad mediante solicitud al correo de contacto.\n\n7. Seguridad\nAplicamos medidas técnicas y organizativas razonables para prevenir accesos no autorizados, pérdida o alteración de datos.\n\n8. Cambios en el aviso legal\nEste aviso puede actualizarse por cambios normativos o mejoras del servicio. La versión vigente estará siempre disponible en la aplicación.\n\nFecha de última actualización: 17/04/2026";
+    Widget contenido = isEng ? _buildAvisoLegalEN() : _buildAvisoLegalES();
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
+  Widget _buildAvisoLegalES() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: '1. ¿Quién es responsable del tratamiento?\n', style: bold),
+        TextSpan(text: 'El responsable del tratamiento es THE RING PRIVATE.\n', style: normal),
+        TextSpan(text: 'Dirección: C. del Amparo, 75, Centro, 28012 Madrid.\n', style: normal),
+        TextSpan(text: 'Correo de contacto: ringasociacion@gmail.com\n\n', style: normal),
+        TextSpan(text: '2. ¿Qué datos se tratan?\n', style: bold),
+        TextSpan(text: 'Se tratan los datos necesarios para gestionar tu alta y tu acceso como socio: Nombre, Apellidos, Correo electrónico y Documento de identidad.\n\n', style: normal),
+        TextSpan(text: '3. ¿Para qué se usan mis datos?\n', style: bold),
+        TextSpan(text: 'La finalidad principal es gestionar la relación con el socio, su acceso al club y las comunicaciones internas de servicio.\n\n', style: normal),
+        TextSpan(text: '4. ¿Cuál es la base legal del tratamiento?\n', style: bold),
+        TextSpan(text: 'La base legal del tratamiento es el consentimiento del usuario y la ejecución de la relación asociativa.\n\n', style: normal),
+        TextSpan(text: '5. ¿Cuánto tiempo se conservan mis datos?\n', style: bold),
+        TextSpan(text: 'Los datos se conservarán mientras exista relación activa con el socio o durante los plazos legales aplicables.\n\n', style: normal),
+        TextSpan(text: '6. ¿Cuáles son mis derechos?\n', style: bold),
+        TextSpan(text: 'Puedes ejercer tus derechos de Acceso, Rectificación, Supresión, Oposición, Limitación y Portabilidad mediante solicitud al correo de contacto.\n\n', style: normal),
+        TextSpan(text: '7. ¿Cómo se protegen mis datos?\n', style: bold),
+        TextSpan(text: 'Se aplican medidas técnicas y organizativas razonables para prevenir accesos no autorizados, pérdida o alteración de datos.\n\n', style: normal),
+        TextSpan(text: '8. ¿Puede cambiar este aviso?\n', style: bold),
+        TextSpan(text: 'Este aviso puede actualizarse por cambios normativos o mejoras del servicio. La versión vigente estará siempre disponible en la aplicación.\n\n', style: normal),
+        TextSpan(text: 'Fecha de última actualización: 17/04/2026', style: bold),
+      ]),
+    );
+  }
+
+  Widget _buildAvisoLegalEN() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: '1. Who is the data controller?\n', style: bold),
+        TextSpan(text: 'The data controller is THE RING PRIVATE.\n', style: normal),
+        TextSpan(text: 'Address: C. del Amparo, 75, Centro, 28012 Madrid.\n', style: normal),
+        TextSpan(text: 'Contact email: ringasociacion@gmail.com\n\n', style: normal),
+        TextSpan(text: '2. What data is processed?\n', style: bold),
+        TextSpan(text: 'We process the necessary data to manage your registration and your access as a member: Name, Surnames, Email, and ID document.\n\n', style: normal),
+        TextSpan(text: '3. Why is my data used?\n', style: bold),
+        TextSpan(text: 'The main purpose is to manage the relationship with the member, their access to the club, and internal service communications.\n\n', style: normal),
+        TextSpan(text: '4. What is the legal basis?\n', style: bold),
+        TextSpan(text: 'The legal basis of the processing is the consent of the user and the execution of the associative relationship.\n\n', style: normal),
+        TextSpan(text: '5. How long is my data kept?\n', style: bold),
+        TextSpan(text: 'Data will be kept as long as there is an active relationship with the member or during the applicable legal periods.\n\n', style: normal),
+        TextSpan(text: '6. What are my rights?\n', style: bold),
+        TextSpan(text: 'You can exercise your rights of Access, Rectification, Deletion, Opposition, Limitation, and Portability by requesting it via the contact email.\n\n', style: normal),
+        TextSpan(text: '7. How is my data protected?\n', style: bold),
+        TextSpan(text: 'Reasonable technical and organizational measures are applied to prevent unauthorized access, loss, or alteration of data.\n\n', style: normal),
+        TextSpan(text: '8. Can this notice change?\n', style: bold),
+        TextSpan(text: 'This notice may be updated due to regulatory changes or service improvements. The current version will always be available in the application.\n\n', style: normal),
+        TextSpan(text: 'Date of last update: 17/04/2026', style: bold),
+      ]),
+    );
+  }
+
+  // ----- AYUDA Y SOPORTE -----
   void _abrirAyuda(bool isEng) {
-    String titulo = isEng ? 'Help and Support' : 'Ayuda y soporte';
-    String contenido = isEng
-        ? "If you have a problem with the application, follow this order:\n\n1. Check the Frequently Asked Questions (FAQ) section first.\n2. If not resolved, write to theringprivate@gmail.com indicating:\n- Account email\n- ID used in registration\n- Mobile model\n- OS Version\n- Exact description of the error\n\nSupport via email:\ntheringprivate@gmail.com\n\nOfficial networks:\nFacebook: https://www.facebook.com/theringprivate\nInstagram: https://www.instagram.com/theringprivate\n\nIn-person assistance:\nC. del Amparo, 75, Centro, 28012 Madrid"
-        : "Si tienes un problema con la aplicación, sigue este orden:\n\n1. Revisa primero la sección de Preguntas Frecuentes.\n2. Si no se resuelve, escribe a theringprivate@gmail.com indicando:\n- Correo de tu cuenta\n- DNI usado en el registro\n- Modelo de móvil\n- Versión de Android/iOS\n- Descripción exacta del error\n\nSoporte por correo:\ntheringprivate@gmail.com\n\nRedes oficiales:\nFacebook: https://www.facebook.com/theringprivate\nInstagram: https://www.instagram.com/theringprivate\n\nAtención presencial:\nC. del Amparo, 75, Centro, 28012 Madrid";
+    String titulo = isEng ? 'Help and Support' : '¿Necesitas Ayuda y Soporte?';
+    Widget contenido = isEng ? _buildAyudaEN() : _buildAyudaES();
     _mostrarBottomSheetLegal(titulo, contenido);
   }
 
+  Widget _buildAyudaES() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: '¿Tienes un problema con la aplicación?\n\n', style: bold),
+        TextSpan(text: 'Sigue este orden:\n\n', style: normal),
+        TextSpan(text: '1. Revisa primero la sección de ', style: normal),
+        TextSpan(text: 'Preguntas Frecuentes', style: bold),
+        TextSpan(text: '.\n', style: normal),
+        TextSpan(text: '2. Si no se resuelve, escribe a ', style: normal),
+        TextSpan(text: 'ringasociacion@gmail.com', style: bold),
+        TextSpan(text: ' indicando:\n', style: normal),
+        TextSpan(text: '• Correo de tu cuenta\n', style: normal),
+        TextSpan(text: '• Documento usado en el registro\n', style: normal),
+        TextSpan(text: '• Modelo de móvil\n', style: normal),
+        TextSpan(text: '• Versión de Android\n', style: normal),
+        TextSpan(text: '• Descripción exacta del error\n\n', style: normal),
+        TextSpan(text: 'Soporte por correo:\n', style: bold),
+        TextSpan(text: 'ringasociacion@gmail.com\n\n', style: normal),
+        TextSpan(text: 'Redes oficiales:\n', style: bold),
+        TextSpan(text: 'Facebook: https://www.facebook.com/theringprivate\n', style: normal),
+        TextSpan(text: 'Instagram: https://www.instagram.com/theringprivate\n\n', style: normal),
+        TextSpan(text: '¿Dónde estamos?\n', style: bold),
+        TextSpan(text: 'C. del Amparo, 75, Centro, 28012 Madrid', style: normal),
+      ]),
+    );
+  }
+
+  Widget _buildAyudaEN() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: 'Do you have a problem with the application?\n\n', style: bold),
+        TextSpan(text: 'Follow this order:\n\n', style: normal),
+        TextSpan(text: '1. First, check the ', style: normal),
+        TextSpan(text: 'Frequently Asked Questions', style: bold),
+        TextSpan(text: ' section.\n', style: normal),
+        TextSpan(text: '2. If it is not resolved, write to ', style: normal),
+        TextSpan(text: 'ringasociacion@gmail.com', style: bold),
+        TextSpan(text: ' providing:\n', style: normal),
+        TextSpan(text: '• Your account email\n', style: normal),
+        TextSpan(text: '• ID document used during registration\n', style: normal),
+        TextSpan(text: '• Mobile model\n', style: normal),
+        TextSpan(text: '• Android version\n', style: normal),
+        TextSpan(text: '• Exact description of the error\n\n', style: normal),
+        TextSpan(text: 'Email support:\n', style: bold),
+        TextSpan(text: 'ringasociacion@gmail.com\n\n', style: normal),
+        TextSpan(text: 'Official networks:\n', style: bold),
+        TextSpan(text: 'Facebook: https://www.facebook.com/theringprivate\n', style: normal),
+        TextSpan(text: 'Instagram: https://www.instagram.com/theringprivate\n\n', style: normal),
+        TextSpan(text: 'Where are we?\n', style: bold),
+        TextSpan(text: 'C. del Amparo, 75, Centro, 28012 Madrid', style: normal),
+      ]),
+    );
+  }
+
+  // ----- FAQ -----
   void _abrirFAQ(bool isEng) {
-    String titulo = isEng ? 'Frequently Asked Questions (FAQ)' : 'Preguntas frecuentes (FAQ)';
-    String contenido = isEng
-        ? "1. How do I register correctly?\nTap Register, fill in your name, surname, ID, email, and a secure password. You must accept the terms and conditions to finish.\n\n2. What documents are valid for registration?\nValid ID, NIE, or Passport are accepted.\n\n3. I forgot my password. What do I do?\nAt login, tap Forgot your password and follow the email recovery process.\n\n4. The QR is not showing. How do I fix it?\nCheck your internet connection, close and reopen the QR screen, and try again. If it persists, log out and log back in.\n\n5. Can I change my personal data?\nSensitive identification data is managed at reception to verify identity.\n\n6. How do I delete my account?\nIn Settings, go to Delete Account, verify your credentials, and confirm final deletion.\n\n7. What happens to my notifications if I delete them?\nIf you delete a notification in your profile, it stops showing in your account. Other users keep their own notifications independently."
-        : "1. ¿Cómo me registro correctamente?\nPulsa en Registrarse, completa nombre, apellidos, DNI, correo y una contraseña segura. Debes aceptar los términos y condiciones para finalizar.\n\n2. ¿Qué documentos son válidos para el registro?\nSe aceptan DNI, NIE o pasaporte en vigor.\n\n3. He olvidado mi contraseña. ¿Qué hago?\nEn inicio de sesión, pulsa Olvidaste tu contraseña y sigue el proceso de recuperación por correo.\n\n4. El QR no se muestra. ¿Cómo lo soluciono?\nComprueba conexión a internet, cierra y abre la pantalla QR y vuelve a intentarlo. Si persiste, cierra sesión y entra de nuevo.\n\n5. ¿Puedo cambiar mis datos personales?\nLos datos sensibles de identificación se gestionan en recepción para verificar identidad.\n\n6. ¿Cómo elimino mi cuenta?\nEn Ajustes, entra en Eliminar cuenta, verifica tus credenciales y confirma la eliminación final.\n\n7. ¿Qué pasa con mis notificaciones si las elimino?\nSi eliminas una notificación en profile, deja de mostrarse en tu cuenta. Otros usuarios mantienen sus propias notificaciones de forma independiente.";
+    String titulo = isEng ? 'Frequently Asked Questions (FAQ)' : '¿Preguntas Frecuentes (FAQ)?';
+    Widget contenido = isEng ? _buildFAQEN() : _buildFAQES();
     _mostrarBottomSheetLegal(titulo, contenido);
+  }
+
+  Widget _buildFAQES() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: '1. ¿Cómo me registro correctamente?\n', style: bold),
+        TextSpan(text: 'Pulsa en Registrarse, completa Nombre, Apellidos, DNI/NIE/Pasaporte, Correo y una Contraseña segura. Debes aceptar los Términos y Condiciones para finalizar.\n\n', style: normal),
+        TextSpan(text: '2. ¿Qué documentos son válidos para el registro?\n', style: bold),
+        TextSpan(text: 'Se aceptan DNI, NIE o Pasaporte en vigor.\n\n', style: normal),
+        TextSpan(text: '3. ¿He olvidado mi contraseña? ¿Qué hago?\n', style: bold),
+        TextSpan(text: 'En Inicio de sesión, pulsa "Olvidaste tu contraseña" y sigue el proceso de recuperación por correo.\n\n', style: normal),
+        TextSpan(text: '4. ¿El QR no se muestra? ¿Cómo lo soluciono?\n', style: bold),
+        TextSpan(text: 'Comprueba la conexión a Internet, cierra y abre la pantalla del QR y vuelve a intentarlo. Si el problema persiste, cierra sesión y entra de nuevo.\n\n', style: normal),
+        TextSpan(text: '5. ¿Puedo cambiar mis datos personales?\n', style: bold),
+        TextSpan(text: 'Los datos sensibles de identificación se gestionan en recepción para verificar la identidad.\n\n', style: normal),
+        TextSpan(text: '6. ¿Cómo elimino mi cuenta?\n', style: bold),
+        TextSpan(text: 'En Ajustes, entra en "Eliminar cuenta", verifica tus credenciales y confirma la eliminación final.\n\n', style: normal),
+        TextSpan(text: '7. ¿Qué pasa con mis notificaciones si las elimino?\n', style: bold),
+        TextSpan(text: 'Si eliminas una notificación en tu perfil, deja de mostrarse en tu cuenta. Los demás usuarios mantienen sus propias notificaciones de forma independiente.', style: normal),
+      ]),
+    );
+  }
+
+  Widget _buildFAQEN() {
+    const bold = TextStyle(fontWeight: FontWeight.bold);
+    const normal = TextStyle(fontWeight: FontWeight.normal);
+    return Text.rich(
+      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        TextSpan(text: '1. How do I register correctly?\n', style: bold),
+        TextSpan(text: 'Tap Register, fill in your Name, Surname, ID/Passport, Email, and a secure Password. You must accept the Terms and Conditions to finish.\n\n', style: normal),
+        TextSpan(text: '2. What documents are valid for registration?\n', style: bold),
+        TextSpan(text: 'Valid ID, NIE, or Passport are accepted.\n\n', style: normal),
+        TextSpan(text: '3. I forgot my password. What do I do?\n', style: bold),
+        TextSpan(text: 'At login, tap "Forgot your password" and follow the email recovery process.\n\n', style: normal),
+        TextSpan(text: '4. The QR is not showing. How do I fix it?\n', style: bold),
+        TextSpan(text: 'Check your internet connection, close and reopen the QR screen, and try again. If the problem persists, log out and log back in.\n\n', style: normal),
+        TextSpan(text: '5. Can I change my personal data?\n', style: bold),
+        TextSpan(text: 'Sensitive identification data is managed at reception to verify identity.\n\n', style: normal),
+        TextSpan(text: '6. How do I delete my account?\n', style: bold),
+        TextSpan(text: 'In Settings, go to "Delete Account", verify your credentials, and confirm the final deletion.\n\n', style: normal),
+        TextSpan(text: '7. What happens to my notifications if I delete them?\n', style: bold),
+        TextSpan(text: 'If you delete a notification in your profile, it stops showing in your account. Other users keep their own notifications independently.', style: normal),
+      ]),
+    );
   }
 
   @override
