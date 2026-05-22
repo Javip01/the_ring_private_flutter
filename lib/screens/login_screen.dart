@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart'; // NECESARIO PARA COMPROBAR EL CORREO EN LA BD
 import 'register_screen.dart';
 import 'home_screen.dart';
 import '../main.dart';
@@ -18,21 +19,59 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
+  // Variables para los errores visuales en línea (borde y texto rojo)
+  String? _emailError;
+  String? _passwordError;
+
   Future<void> _login(bool isEng) async {
+    // 1. Limpiamos errores previos al intentar entrar
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
+    bool hasError = false;
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(isEng ? 'Fill in all fields' : 'Rellena todos los campos'),
-        backgroundColor: const Color(0xFFA30000),
-      ));
-      return;
+    // 2. Comprobamos campos obligatorios vacíos
+    if (email.isEmpty) {
+      setState(() => _emailError = isEng ? 'Required field' : 'Campo obligatorio');
+      hasError = true;
     }
+    if (password.isEmpty) {
+      setState(() => _passwordError = isEng ? 'Required field' : 'Campo obligatorio');
+      hasError = true;
+    }
+
+    if (hasError) return;
 
     setState(() => _isLoading = true);
 
     try {
+      // 3. COMPROBACIÓN DEL CORREO EN LA BASE DE DATOS
+      final snapshot = await FirebaseDatabase.instance.ref("usuarios").get();
+      bool existeEnBD = false;
+
+      if (snapshot.exists) {
+        final usersMap = snapshot.value as Map<dynamic, dynamic>;
+        usersMap.forEach((key, value) {
+          if (value is Map && value['email']?.toString().trim().toLowerCase() == email.toLowerCase()) {
+            existeEnBD = true;
+          }
+        });
+      }
+
+      // 4. Si el correo no existe, mostramos el error SOLO en el correo y cortamos el proceso
+      if (!existeEnBD) {
+        setState(() {
+          _emailError = isEng ? 'This email does not exist in the app.' : 'Este correo no existe en la app.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // 5. EL CORREO EXISTE -> Intentamos iniciar sesión con la contraseña
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -45,27 +84,53 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      String errorMsg = isEng ? 'Invalid credentials' : 'Usuario o contraseña incorrectos';
-      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-email') {
-        errorMsg = isEng ? 'Invalid credentials' : 'Usuario o contraseña incorrectos';
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(errorMsg),
-          backgroundColor: const Color(0xFFA30000),
-        ));
-      }
+      // 6. SI FALLA EL AUTH, COMO SABEMOS QUE EL CORREO EXISTE, EL ERROR ES LA CONTRASEÑA
+      setState(() {
+        _passwordError = isEng ? 'Incorrect password' : 'Contraseña incorrecta';
+      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isEng ? 'An error occurred' : 'Ocurrió un error inesperado'),
-          backgroundColor: const Color(0xFFA30000),
-        ));
-      }
+      setState(() {
+        _emailError = isEng ? 'An unexpected error occurred' : 'Ocurrió un error inesperado';
+      });
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // --- POPUP INFORMATIVO (ÉXITO O ERROR) ---
+  void _mostrarDialogoMensaje(String titulo, String mensaje, bool isDark) {
+    final bgColor = isDark ? const Color(0xFF161616) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: bgColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(titulo, style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              Text(mensaje, style: TextStyle(color: Colors.grey[600], fontSize: 15), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA30000),
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // --- POPUP RECUPERAR CONTRASEÑA ---
@@ -114,19 +179,57 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFA30000),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                       ),
                       onPressed: () async {
                         String email = _recuperarEmailController.text.trim();
                         if (email.isEmpty) return;
+
+                        Navigator.pop(context); // Cerramos el cuadro de texto de inmediato
+
                         try {
+                          // 1. Comprobamos si el correo existe físicamente en la Realtime Database
+                          final snapshot = await FirebaseDatabase.instance.ref("usuarios").get();
+                          bool existeEnBD = false;
+
+                          if (snapshot.exists) {
+                            final usersMap = snapshot.value as Map<dynamic, dynamic>;
+                            usersMap.forEach((key, value) {
+                              if (value is Map && value['email']?.toString().trim().toLowerCase() == email.toLowerCase()) {
+                                existeEnBD = true;
+                              }
+                            });
+                          }
+
+                          // 2. Si no existe en la base de datos, mostramos el pop-up de error solicitado
+                          if (!existeEnBD) {
+                            if (mounted) {
+                              _mostrarDialogoMensaje(
+                                  isEng ? 'Error' : 'Error',
+                                  isEng ? 'The email $email does not exist in the application.' : 'El correo $email no existe en la app.',
+                                  isDark
+                              );
+                            }
+                            return; // Detenemos la ejecución aquí
+                          }
+
+                          // 3. Si el correo sí existe, procedemos a enviar el enlace de recuperación oficial
                           await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
                           if (mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Recovery email sent.' : 'Correo de recuperación enviado.'), backgroundColor: Colors.green));
+                            _mostrarDialogoMensaje(
+                                isEng ? 'Email Sent' : 'Correo Enviado',
+                                isEng ? 'An email has just been sent to your account $email with the information to follow for the password change.' : 'Se acaba de enviar un correo a tu cuenta $email con la información a seguir para el cambio de contraseña.',
+                                isDark
+                            );
                           }
                         } catch (e) {
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Error sending email.' : 'Error al enviar el correo.'), backgroundColor: const Color(0xFFA30000)));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text(isEng ? 'Error processing request.' : 'Error al procesar la solicitud.'),
+                                backgroundColor: const Color(0xFFA30000)
+                            ));
+                          }
                         }
                       },
                       child: Text(isEng ? 'Send' : 'Enviar', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -368,15 +471,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                       controller: _emailController,
                                       keyboardType: TextInputType.emailAddress,
                                       style: TextStyle(color: textColor),
+                                      onChanged: (_) {
+                                        if (_emailError != null) setState(() => _emailError = null);
+                                      },
                                       decoration: InputDecoration(
                                         hintText: isEng ? 'Email' : 'Correo electrónico',
                                         hintStyle: TextStyle(color: Colors.grey[500]),
                                         filled: true,
                                         fillColor: cardBgColor,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                        errorText: _emailError,
+                                        errorStyle: const TextStyle(color: Color(0xFFFF4C4C), fontWeight: FontWeight.bold),
                                         enabledBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: borderColor)),
                                         focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
-                                        prefixIcon: Icon(Icons.email, color: Colors.grey[500]),
+                                        errorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
+                                        focusedErrorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
+                                        prefixIcon: Icon(Icons.email, color: _emailError != null ? const Color(0xFFFF4C4C) : Colors.grey[500]),
                                       ),
                                     ),
                                     const SizedBox(height: 16),
@@ -386,15 +496,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                       controller: _passwordController,
                                       obscureText: !_isPasswordVisible,
                                       style: TextStyle(color: textColor),
+                                      onChanged: (_) {
+                                        if (_passwordError != null) setState(() => _passwordError = null);
+                                      },
                                       decoration: InputDecoration(
                                         hintText: isEng ? 'Password' : 'Contraseña',
                                         hintStyle: TextStyle(color: Colors.grey[500]),
                                         filled: true,
                                         fillColor: cardBgColor,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                        errorText: _passwordError,
+                                        errorStyle: const TextStyle(color: Color(0xFFFF4C4C), fontWeight: FontWeight.bold),
                                         enabledBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: borderColor)),
                                         focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
-                                        prefixIcon: Icon(Icons.lock, color: Colors.grey[500]),
+                                        errorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
+                                        focusedErrorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
+                                        prefixIcon: Icon(Icons.lock, color: _passwordError != null ? const Color(0xFFFF4C4C) : Colors.grey[500]),
                                         suffixIcon: IconButton(
                                           icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey[500]),
                                           onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),

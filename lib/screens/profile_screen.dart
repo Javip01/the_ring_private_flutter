@@ -11,6 +11,42 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
 
+  // --- POPUP INFORMATIVO (ÉXITO O ERROR) ---
+  void _mostrarDialogoMensaje(String titulo, String mensaje, bool isDark) {
+    final bgColor = isDark ? const Color(0xFF161616) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: bgColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(titulo, style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              Text(mensaje, style: TextStyle(color: Colors.grey[600], fontSize: 15), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA30000),
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // --- FUNCIÓN SEGURA Y AVANZADA PARA CAMBIAR CONTRASEÑA ---
   void _mostrarDialogoPassword(BuildContext context, bool isEng, ThemeMode currentTheme) {
     final isDark = currentTheme == ThemeMode.dark;
@@ -95,11 +131,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onPressed: () async {
                             final user = FirebaseAuth.instance.currentUser;
                             if (user != null && user.email != null) {
-                              Navigator.pop(context); // Cerramos el dialogo
+                              Navigator.pop(context); // Cerramos el dialogo de cambiar contraseña
                               try {
+                                // Enviamos directamente el correo de recuperación porque ya sabemos cuál es su email
                                 await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email!);
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Recovery email sent.' : 'Correo de recuperación enviado.'), backgroundColor: Colors.green));
+                                  _mostrarDialogoMensaje(
+                                      isEng ? 'Email Sent' : 'Correo Enviado',
+                                      isEng ? 'An email has just been sent to your account ${user.email} with the information to follow for the password change.' : 'Se acaba de enviar un correo a tu cuenta ${user.email} con la información a seguir para el cambio de contraseña.',
+                                      isDark
+                                  );
                                 }
                               } catch (e) {
                                 if (mounted) {

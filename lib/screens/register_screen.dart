@@ -28,6 +28,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _tipoDocumento = 'DNI/NIE';
   String? _paisPasaporte = 'España';
 
+  // Variables para los errores visuales en línea (rojo)
+  String? _nombreError;
+  String? _apellidosError;
+  String? _dniError;
+  String? _emailError;
+  String? _passwordError;
+  bool _terminosError = false;
+
   // Lista Completa de Países en Español
   final List<String> _listaTodosLosPaises = [
     'Afganistán', 'Albania', 'Alemania', 'Andorra', 'Angola', 'Antigua y Barbuda', 'Arabia Saudita',
@@ -84,10 +92,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register(bool isEng) async {
-    if (!_aceptaTerminos) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'You must accept the terms and conditions' : 'Debes aceptar los términos y condiciones'), backgroundColor: const Color(0xFFA30000)));
-      return;
-    }
+    // 1. Limpiar errores de pantalla previos
+    setState(() {
+      _nombreError = null;
+      _apellidosError = null;
+      _dniError = null;
+      _emailError = null;
+      _passwordError = null;
+      _terminosError = false;
+    });
 
     String nombre = _nombreController.text.trim();
     String apellidos = _apellidosController.text.trim();
@@ -95,44 +108,88 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String correo = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    if (nombre.isEmpty || documento.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Fill in all mandatory fields' : 'Rellena los campos obligatorios'), backgroundColor: const Color(0xFFA30000)));
-      return;
-    }
+    bool hasError = false;
 
-    if (_tipoDocumento == 'DNI/NIE' && !_validarDNIoNIE(documento)) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Invalid DNI/NIE' : 'El DNI o NIE introducido no es válido'), backgroundColor: const Color(0xFFA30000)));
-      return;
-    } else if (_tipoDocumento == 'PASAPORTE' && documento.length < 5) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Invalid Passport' : 'El Pasaporte introducido no es válido'), backgroundColor: const Color(0xFFA30000)));
-      return;
+    // 2. Validación local en línea
+    if (nombre.isEmpty) { setState(() => _nombreError = isEng ? 'Required field' : 'Campo obligatorio'); hasError = true; }
+    if (apellidos.isEmpty) { setState(() => _apellidosError = isEng ? 'Required field' : 'Campo obligatorio'); hasError = true; }
+    if (documento.isEmpty) {
+      setState(() => _dniError = isEng ? 'Required field' : 'Campo obligatorio'); hasError = true;
+    } else {
+      if (_tipoDocumento == 'DNI/NIE' && !_validarDNIoNIE(documento)) {
+        setState(() => _dniError = isEng ? 'Invalid DNI/NIE' : 'Formato de DNI/NIE no válido'); hasError = true;
+      } else if (_tipoDocumento == 'PASAPORTE' && documento.length < 5) {
+        setState(() => _dniError = isEng ? 'Invalid Passport' : 'Pasaporte no válido'); hasError = true;
+      }
     }
-
-    if (correo.isNotEmpty && !_validarEmail(correo)) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Invalid email format' : 'El formato del correo no es válido'), backgroundColor: const Color(0xFFA30000)));
-      return;
+    if (correo.isEmpty) {
+      setState(() => _emailError = isEng ? 'Required field' : 'Campo obligatorio'); hasError = true;
+    } else if (!_validarEmail(correo)) {
+      setState(() => _emailError = isEng ? 'Invalid email' : 'Formato de correo no válido'); hasError = true;
     }
-
     if (!_hasMinLength || !_hasUppercase || !_hasSpecialChar) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Password does not meet security requirements' : 'La contraseña no cumple los requisitos de seguridad'), backgroundColor: const Color(0xFFA30000)));
-      return;
+      setState(() => _passwordError = isEng ? 'Password does not meet requirements' : 'No cumple los requisitos de seguridad'); hasError = true;
     }
+    if (!_aceptaTerminos) {
+      setState(() => _terminosError = true); hasError = true;
+    }
+
+    if (hasError) return;
 
     setState(() => _isLoading = true);
+
+    UserCredential? cred;
     try {
-      String signupEmail = correo.isNotEmpty ? correo : '${documento.toLowerCase()}@thering.local';
+      // 3. COMPROBACIÓN DEL CORREO: Intentamos crear la cuenta.
+      // Si el correo ya existe, esto lanza un error y salta al 'catch' abortando todo.
+      cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: correo, password: password);
 
-      UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: signupEmail, password: password);
+      // 4. COMPROBACIÓN DEL DNI: Como ya estamos "autenticados", tenemos permiso para leer la base de datos.
+      final snapshot = await FirebaseDatabase.instance.ref("usuarios").get();
+
+      bool dniEnUso = false;
+      String? oldUid;
+      Map<dynamic, dynamic>? oldUserDataToKeep;
+
+      if (snapshot.exists) {
+        final usersMap = snapshot.value as Map<dynamic, dynamic>;
+        usersMap.forEach((key, value) {
+          if (value is Map && value['documento']?.toString().toUpperCase() == documento) {
+            String? existingEmail = value['email']?.toString();
+
+            if (existingEmail != null && existingEmail.isNotEmpty && !existingEmail.endsWith('@thering.local')) {
+              // EL DNI YA EXISTE CON UN CORREO REAL
+              dniEnUso = true;
+            } else {
+              // ES UN USUARIO ANTIGUO DE KOTLIN SIN CORREO (Fusión Mágica)
+              oldUid = key.toString();
+              oldUserDataToKeep = value;
+            }
+          }
+        });
+      }
+
+      if (dniEnUso) {
+        // ROLLBACK INMEDIATO: Si el DNI ya existía, borramos la cuenta que acabamos de crear silenciosamente
+        await cred.user?.delete();
+        await FirebaseAuth.instance.signOut();
+        setState(() {
+          _dniError = isEng ? 'This ID is already registered' : 'Este DNI ya está en uso';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // 5. Todo está correcto y libre. Guardamos los datos.
       await cred.user?.updateDisplayName(nombre);
+      String newUid = cred.user!.uid;
 
-      String uid = cred.user!.uid;
+      await FirebaseDatabase.instance.ref("MapeoDNI").child(documento).set(correo);
 
-      await FirebaseDatabase.instance.ref("MapeoDNI").child(documento).set(signupEmail);
-
-      await FirebaseDatabase.instance.ref("usuarios").child(uid).set({
+      Map<String, dynamic> newData = {
         "acceptedTerms": _aceptaTerminos,
         "documento": documento,
-        "email": signupEmail,
+        "email": correo,
         "name": nombre,
         "surname": apellidos,
         "tipoDocumento": _tipoDocumento,
@@ -140,14 +197,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "bloqueado": false,
         "taquilla_actual": "",
         "fecha_asignacion_taquilla": "",
-      });
+      };
+
+      // 6. Fusión de datos si era usuario antiguo (AÑADIDOS LOS '!' PARA EVITAR EL ERROR DEL COMPILADOR)
+      if (oldUserDataToKeep != null) {
+        oldUserDataToKeep!.forEach((key, value) {
+          if (!newData.containsKey(key)) {
+            newData[key.toString()] = value;
+          }
+        });
+        newData["bloqueado"] = oldUserDataToKeep!["bloqueado"] ?? false;
+        newData["taquilla_actual"] = oldUserDataToKeep!["taquilla_actual"] ?? "";
+        newData["fecha_asignacion_taquilla"] = oldUserDataToKeep!["fecha_asignacion_taquilla"] ?? "";
+      }
+
+      await FirebaseDatabase.instance.ref("usuarios").child(newUid).set(newData);
+
+      // Borramos registro antiguo fantasma para evitar duplicados (AÑADIDO EL '!')
+      if (oldUid != null && oldUid != newUid) {
+        await FirebaseDatabase.instance.ref("usuarios").child(oldUid!).remove();
+      }
 
       if (!mounted) return;
       Navigator.pop(context);
+
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        if (e.code == 'email-already-in-use') {
+          _emailError = isEng ? 'Email already in use' : 'Este correo ya está registrado';
+        } else {
+          _emailError = isEng ? 'Error creating account' : 'Error al crear la cuenta';
+        }
+      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Error. DNI or Email might exist.' : 'Error al crear cuenta. Quizás el documento o correo ya existen.'), backgroundColor: const Color(0xFFA30000)));
+      // Si falla cualquier otra cosa de red, borramos la cuenta creada para no dejar rastro
+      if (cred != null) {
+        try { await cred.user?.delete(); } catch (_) {}
       }
+      setState(() {
+        _dniError = isEng ? 'Connection error' : 'Error al conectar con la base de datos';
+      });
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -341,24 +430,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _mostrarTerminos(bool isEng, bool isDark) {
-    String titulo =
-    isEng ? 'Terms and Conditions' : 'Términos y Condiciones';
+    String titulo = isEng ? 'Terms and Conditions' : 'Términos y Condiciones';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor:
-      isDark ? const Color(0xFF000000) : const Color(0xFFF9F9F9),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF9F9F9),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => SafeArea(
         child: Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            top: 24,
-            left: 24,
-            right: 24,
+            top: 24, left: 24, right: 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -368,19 +451,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      titulo,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text(titulo, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 22, fontWeight: FontWeight.bold)),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: Colors.grey[500]),
-                    onPressed: () => Navigator.pop(context),
-                  )
+                  IconButton(icon: Icon(Icons.close, color: Colors.grey[500]), onPressed: () => Navigator.pop(context))
                 ],
               ),
               const SizedBox(height: 16),
@@ -390,225 +463,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: SingleChildScrollView(
                   child: RichText(
                     text: TextSpan(
-                      style: TextStyle(
-                        color:
-                        isDark ? Colors.grey[300] : Colors.black87,
-                        fontSize: 15,
-                        height: 1.5,
-                      ),
+                      style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87, fontSize: 15, height: 1.5),
                       children: isEng
                           ? const [
-
-                        TextSpan(
-                          text:
-                          'These Terms and Conditions regulate the download, access, and use of the THE RING PRIVATE application (hereinafter, the Application). Access and use imply express acceptance of these conditions.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '1. Object\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'The Application aims to manage member identification, facilitate internal notices, and improve the club access experience. Its use is personal and non-transferable.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '2. User Registration\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'To create an account, the user must provide real and valid data (name, surname, ID, and email). The user is responsible for keeping their password safe and not sharing it.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '3. Rules of Use\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'The user agrees to use the Application lawfully and respectfully. It is prohibited to manipulate, copy, decompile, alter, or reuse the Application\'s content without express authorization.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '4. Intellectual Property\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'All intellectual and industrial property rights over the Application belong to THE RING PRIVATE or authorized third parties.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '5. Data Protection\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'Personal data will be processed according to the GDPR and current Spanish regulations. The user can exercise their rights of access, rectification, deletion, opposition, limitation, and portability by contacting the entity.\n\n',
-                        ),
-
-                        TextSpan(
-                          text:
-                          '6. Availability and Responsibility\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'THE RING PRIVATE may update, modify, or suspend the Application for technical or legal reasons. Absolute availability is not guaranteed.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '7. Account Deletion\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'The user can request account deletion from the settings section. This action eliminates access and associated data in enabled systems, except for legal retention obligations.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '8. Applicable Legislation\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'These conditions are governed by Spanish law. Any controversy will be submitted to the competent courts and tribunals of Madrid, unless a mandatory legal provision states otherwise.',
-                        ),
+                        TextSpan(text: 'These Terms and Conditions regulate the download, access, and use of the THE RING PRIVATE application (hereinafter, the Application). Access and use imply express acceptance of these conditions.\n\n'),
+                        TextSpan(text: '1. Object\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'The Application aims to manage member identification, facilitate internal notices, and improve the club access experience. Its use is personal and non-transferable.\n\n'),
+                        TextSpan(text: '2. User Registration\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'To create an account, the user must provide real and valid data (name, surname, ID, and email). The user is responsible for keeping their password safe and not sharing it.\n\n'),
+                        TextSpan(text: '3. Rules of Use\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'The user agrees to use the Application lawfully and respectfully. It is prohibited to manipulate, copy, decompile, alter, or reuse the Application\'s content without express authorization.\n\n'),
+                        TextSpan(text: '4. Intellectual Property\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'All intellectual and industrial property rights over the Application belong to THE RING PRIVATE or authorized third parties.\n\n'),
+                        TextSpan(text: '5. Data Protection\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'Personal data will be processed according to the GDPR and current Spanish regulations. The user can exercise their rights of access, rectification, deletion, opposition, limitation, and portability by contacting the entity.\n\n'),
+                        TextSpan(text: '6. Availability and Responsibility\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'THE RING PRIVATE may update, modify, or suspend the Application for technical or legal reasons. Absolute availability is not guaranteed.\n\n'),
+                        TextSpan(text: '7. Account Deletion\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'The user can request account deletion from the settings section. This action eliminates access and associated data in enabled systems, except for legal retention obligations.\n\n'),
+                        TextSpan(text: '8. Applicable Legislation\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'These conditions are governed by Spanish law. Any controversy will be submitted to the competent courts and tribunals of Madrid, unless a mandatory legal provision states otherwise.'),
                       ]
                           : const [
-
-                        TextSpan(
-                          text:
-                          'Estos Términos y Condiciones regulan la descarga, el acceso y el uso de la aplicación THE RING PRIVATE (en adelante, la Aplicación). El acceso y uso de la Aplicación implica la aceptación expresa de estas condiciones.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '1. Objeto\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'La Aplicación tiene como finalidad gestionar la identificación de socios, facilitar la comunicación de avisos internos y mejorar la experiencia de acceso al club. Su uso es personal e intransferible.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '2. Registro de usuario\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'Para crear una cuenta, el usuario debe facilitar datos reales y vigentes (nombre, apellidos, documento de identidad y correo electrónico). El usuario es responsable de custodiar su contraseña y de no compartirla con terceros.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '3. Normas de uso\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'El usuario se compromete a utilizar la Aplicación de forma lícita, respetuosa y conforme a la normativa aplicable. Queda prohibido manipular, copiar, descompilar, alterar o reutilizar el contenido de la Aplicación sin autorización expresa.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '4. Propiedad intelectual\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'Todos los derechos de propiedad intelectual e industrial sobre la Aplicación, su diseño, textos, marcas y elementos gráficos pertenecen a THE RING PRIVATE o a terceros autorizados.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '5. Protección de datos\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'Los datos personales se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) y la normativa española vigente. El tratamiento se realiza para gestionar la relación con el socio y el funcionamiento de la Aplicación.\n\n',
-                        ),
-                        TextSpan(
-                          text:
-                          'El usuario puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad mediante contacto con la entidad.\n\n',
-                        ),
-
-                        TextSpan(
-                          text:
-                          '6. Disponibilidad y responsabilidad\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'THE RING PRIVATE podrá actualizar, modificar o suspender la Aplicación por motivos técnicos, legales o de mantenimiento. Aunque se aplican medidas de seguridad, no se garantiza la disponibilidad absoluta ni la ausencia total de errores técnicos.\n\n',
-                        ),
-
-                        TextSpan(
-                          text:
-                          '7. Baja y eliminación de cuenta\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'El usuario puede solicitar la eliminación de su cuenta desde la sección de ajustes. Esta acción elimina el acceso y los datos asociados en los sistemas habilitados, salvo obligación legal de conservación.\n\n',
-                        ),
-
-                        TextSpan(
-                          text: '8. Legislación aplicable\n',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          'Estas condiciones se rigen por la legislación española. Cualquier controversia se someterá a los juzgados y tribunales competentes de Madrid, salvo disposición legal imperativa en contrario.',
-                        ),
+                        TextSpan(text: 'Estos Términos y Condiciones regulan la descarga, el acceso y el uso de la aplicación THE RING PRIVATE (en adelante, la Aplicación). El acceso y uso de la Aplicación implica la aceptación expresa de estas condiciones.\n\n'),
+                        TextSpan(text: '1. Objeto\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'La Aplicación tiene como finalidad gestionar la identificación de socios, facilitar la comunicación de avisos internos y mejorar la experiencia de acceso al club. Su uso es personal e intransferible.\n\n'),
+                        TextSpan(text: '2. Registro de usuario\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'Para crear una cuenta, el usuario debe facilitar datos reales y vigentes (nombre, apellidos, documento de identidad y correo electrónico). El usuario es responsable de custodiar su contraseña y de no compartirla con terceros.\n\n'),
+                        TextSpan(text: '3. Normas de uso\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'El usuario se compromete a utilizar la Aplicación de forma lícita, respetuosa y conforme a la normativa aplicable. Queda prohibido manipular, copiar, descompilar, alterar o reutilizar el contenido de la Aplicación sin autorización expresa.\n\n'),
+                        TextSpan(text: '4. Propiedad intelectual\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'Todos los derechos de propiedad intelectual e industrial sobre la Aplicación, su diseño, textos, marcas y elementos gráficos pertenecen a THE RING PRIVATE o a terceros autorizados.\n\n'),
+                        TextSpan(text: '5. Protección de datos\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'Los datos personales se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) y la normativa española vigente. El tratamiento se realiza para gestionar la relación con el socio y el funcionamiento de la Aplicación.\n\n'),
+                        TextSpan(text: 'El usuario puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad mediante contacto con la entidad.\n\n'),
+                        TextSpan(text: '6. Disponibilidad y responsabilidad\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'THE RING PRIVATE podrá actualizar, modificar o suspender la Aplicación por motivos técnicos, legales o de mantenimiento. Aunque se aplican medidas de seguridad, no se garantiza la disponibilidad absoluta ni la ausencia total de errores técnicos.\n\n'),
+                        TextSpan(text: '7. Baja y eliminación de cuenta\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'El usuario puede solicitar la eliminación de su cuenta desde la sección de ajustes. Esta acción elimina el acceso y los datos asociados en los sistemas habilitados, salvo obligación legal de conservación.\n\n'),
+                        TextSpan(text: '8. Legislación aplicable\n', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        TextSpan(text: 'Estas condiciones se rigen por la legislación española. Cualquier controversia se someterá a los juzgados y tribunales competentes de Madrid, salvo disposición legal imperativa en contrario.'),
                       ],
                     ),
                   ),
@@ -621,19 +515,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFA30000),
                   minimumSize: const Size(double.infinity, 55),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: Text(
-                  isEng ? 'ACCEPT' : 'ACEPTAR',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
               )
             ],
           ),
@@ -754,9 +639,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 24),
-                                    _buildRingInput(_nombreController, isEng ? 'Name' : 'Nombre', false, textColor, borderColor, cardBgColor),
+
+                                    // Campos con Errores en línea integrados
+                                    _buildRingInput(_nombreController, isEng ? 'Name' : 'Nombre', false, textColor, borderColor, cardBgColor, _nombreError, () => setState(() => _nombreError = null)),
                                     const SizedBox(height: 16),
-                                    _buildRingInput(_apellidosController, isEng ? 'Surnames' : 'Apellidos', false, textColor, borderColor, cardBgColor),
+                                    _buildRingInput(_apellidosController, isEng ? 'Surnames' : 'Apellidos', false, textColor, borderColor, cardBgColor, _apellidosError, () => setState(() => _apellidosError = null)),
                                     const SizedBox(height: 16),
 
                                     // SELECTOR DE DOCUMENTO
@@ -784,6 +671,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                             setState(() {
                                               _tipoDocumento = newValue!;
                                               _dniController.clear();
+                                              _dniError = null;
                                             });
                                           },
                                         ),
@@ -818,22 +706,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     TextField(
                                       controller: _dniController,
                                       style: TextStyle(color: textColor),
-                                      inputFormatters: [
-                                        LengthLimitingTextInputFormatter(_tipoDocumento == 'DNI/NIE' ? 9 : 15),
-                                      ],
+                                      inputFormatters: [LengthLimitingTextInputFormatter(_tipoDocumento == 'DNI/NIE' ? 9 : 15)],
+                                      onChanged: (_) { if (_dniError != null) setState(() => _dniError = null); },
                                       decoration: InputDecoration(
                                         hintText: _tipoDocumento == 'DNI/NIE' ? 'DNI/NIE' : (isEng ? 'Passport Number' : 'Número de Pasaporte'),
                                         hintStyle: TextStyle(color: Colors.grey[500]),
                                         filled: true,
                                         fillColor: cardBgColor,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                        errorText: _dniError,
+                                        errorStyle: const TextStyle(color: Color(0xFFFF4C4C), fontWeight: FontWeight.bold),
                                         enabledBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: borderColor)),
-                                        focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: Color(0xFFA30000), width: 2)),
+                                        focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
+                                        errorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
+                                        focusedErrorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
                                       ),
                                     ),
                                     const SizedBox(height: 16),
 
-                                    _buildRingInput(_emailController, isEng ? 'Email' : 'Correo Electrónico', false, textColor, borderColor, cardBgColor),
+                                    _buildRingInput(_emailController, isEng ? 'Email' : 'Correo Electrónico', false, textColor, borderColor, cardBgColor, _emailError, () => setState(() => _emailError = null)),
                                     const SizedBox(height: 16),
 
                                     TextField(
@@ -842,6 +733,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       style: TextStyle(color: textColor),
                                       onChanged: (value) {
                                         setState(() {
+                                          if (_passwordError != null) _passwordError = null;
                                           _hasMinLength = value.length >= 6;
                                           _hasUppercase = value.contains(RegExp(r'[A-Z]'));
                                           _hasSpecialChar = value.contains(RegExp(r'[^a-zA-Z0-9]'));
@@ -853,8 +745,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         filled: true,
                                         fillColor: cardBgColor,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                        errorText: _passwordError,
+                                        errorStyle: const TextStyle(color: Color(0xFFFF4C4C), fontWeight: FontWeight.bold),
                                         enabledBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: borderColor)),
                                         focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
+                                        errorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
+                                        focusedErrorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
                                         suffixIcon: IconButton(icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey), onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)),
                                       ),
                                     ),
@@ -874,26 +770,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
 
                                     const SizedBox(height: 16),
-                                    Row(
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Checkbox(
-                                          value: _aceptaTerminos,
-                                          activeColor: const Color(0xFFA30000),
-                                          onChanged: (val) => setState(() => _aceptaTerminos = val!),
-                                        ),
-                                        Expanded(
-                                            child: GestureDetector(
-                                                onTap: () => _mostrarTerminos(isEng, isDarkMode),
-                                                child: Text.rich(
-                                                    TextSpan(
-                                                        children: [
-                                                          TextSpan(text: isEng ? 'I accept the ' : 'Acepto los ', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                                                          TextSpan(text: isEng ? 'terms and conditions' : 'términos y condiciones', style: const TextStyle(color: Color(0xFFA30000), fontSize: 13, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
-                                                        ]
+                                        Row(
+                                          children: [
+                                            Checkbox(
+                                              value: _aceptaTerminos,
+                                              activeColor: const Color(0xFFA30000),
+                                              side: _terminosError ? const BorderSide(color: Color(0xFFFF4C4C), width: 2) : null,
+                                              onChanged: (val) => setState(() { _aceptaTerminos = val!; _terminosError = false; }),
+                                            ),
+                                            Expanded(
+                                                child: GestureDetector(
+                                                    onTap: () => _mostrarTerminos(isEng, isDarkMode),
+                                                    child: Text.rich(
+                                                        TextSpan(
+                                                            children: [
+                                                              TextSpan(text: isEng ? 'I accept the ' : 'Acepto los ', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                                              TextSpan(text: isEng ? 'terms and conditions' : 'términos y condiciones', style: const TextStyle(color: Color(0xFFA30000), fontSize: 13, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                                                            ]
+                                                        )
                                                     )
                                                 )
-                                            )
+                                            ),
+                                          ],
                                         ),
+                                        if (_terminosError)
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 14.0),
+                                            child: Text(isEng ? 'Required field' : 'Debes aceptar los términos', style: const TextStyle(color: Color(0xFFFF4C4C), fontSize: 12, fontWeight: FontWeight.bold)),
+                                          )
                                       ],
                                     ),
                                     const SizedBox(height: 24),
@@ -912,33 +819,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 24),
-
-                                    // FILA INFERIOR: IDIOMA Y MANUAL
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: [
-                                        InkWell(
-                                          onTap: _mostrarDialogoIdioma,
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.translate, color: Color(0xFFA30000), size: 18),
-                                              const SizedBox(width: 6),
-                                              Text(isEng ? '🇬🇧 EN' : '🇪🇸 ES', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(width: 1, height: 20, color: borderColor),
-                                        InkWell(
-                                          onTap: _mostrarManual,
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.menu_book, color: Colors.grey, size: 18),
-                                              const SizedBox(width: 6),
-                                              Text(isEng ? 'Manual' : 'Manual', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                                    GestureDetector(
+                                      onTap: () => Navigator.pop(context),
+                                      child: Text(isEng ? 'Already have an account? Login' : '¿Ya tienes cuenta? Inicia sesión', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold)),
                                     ),
                                   ],
                                 ),
@@ -960,19 +843,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildRingInput(TextEditingController controller, String hint, bool isPassword, Color textColor, Color borderColor, Color fillColor) {
+  // Helper para pintar inputs con validación en línea
+  Widget _buildRingInput(TextEditingController controller, String hint, bool isPassword, Color textColor, Color borderColor, Color fillColor, String? errorText, VoidCallback onChanged) {
     return TextField(
       controller: controller,
       obscureText: isPassword ? !_isPasswordVisible : false,
       style: TextStyle(color: textColor),
+      onChanged: (_) => onChanged(),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey[500]),
         filled: true,
         fillColor: fillColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        errorText: errorText, // Muestra el mensaje en rojo automáticamente
+        errorStyle: const TextStyle(color: Color(0xFFFF4C4C), fontWeight: FontWeight.bold),
         enabledBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(30)), borderSide: BorderSide(color: borderColor)),
         focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFA30000), width: 2)),
+        errorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
+        focusedErrorBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(30)), borderSide: const BorderSide(color: Color(0xFFFF4C4C), width: 2)),
         suffixIcon: isPassword ? IconButton(icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey), onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)) : null,
       ),
     );

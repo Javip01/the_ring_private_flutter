@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // NECESARIO PARA EL PORTAPAPELES (NUEVO)
+import 'package:flutter/services.dart'; // NECESARIO PARA EL PORTAPAPELES
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
-import 'tarifas_screen.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -31,13 +30,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
 
     try {
-      // Intentamos abrir la app de correo forzando la salida (LaunchMode.externalApplication)
       bool lanzado = await launchUrl(emailUri, mode: LaunchMode.externalApplication);
       if (!lanzado) {
         throw Exception('No se pudo abrir el correo');
       }
     } catch (e) {
-      // SALVAVIDAS: Si falla (muy común en iPhones sin Apple Mail configurado), lo copiamos al portapapeles
       Clipboard.setData(const ClipboardData(text: 'theringprivate@gmail.com'));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,7 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               content: Text(isEng
                   ? "Mail app not found. Email copied to clipboard!"
                   : "App de correo no configurada. ¡Correo copiado al portapapeles!"),
-              backgroundColor: Colors.green, // En verde porque la copia ha sido un éxito
+              backgroundColor: Colors.green,
               duration: const Duration(seconds: 4),
             )
         );
@@ -53,7 +50,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // --- POPUP CONTRASEÑA CON REAUTENTICACIÓN ---
+  // --- POPUP INFORMATIVO (ÉXITO O ERROR) ---
+  void _mostrarDialogoMensaje(String titulo, String mensaje, bool isDark) {
+    final bgColor = isDark ? const Color(0xFF161616) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: bgColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(titulo, style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              Text(mensaje, style: TextStyle(color: Colors.grey[600], fontSize: 15), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA30000),
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(isEng ? 'ACCEPT' : 'ACEPTAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- POPUP CONTRASEÑA CON REAUTENTICACIÓN Y OLVIDÉ MI CONTRASEÑA ---
   void _mostrarDialogoPassword() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
@@ -123,16 +156,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
 
+                      // BOTÓN DE "OLVIDÉ MI CONTRASEÑA" CON EL NUEVO POPUP
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () async {
                             final user = FirebaseAuth.instance.currentUser;
                             if (user != null && user.email != null) {
-                              Navigator.pop(context);
+                              Navigator.pop(context); // Cerramos el dialogo de contraseña
                               try {
+                                // Como ya está logueado, enviamos el correo directamente
                                 await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email!);
-                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Recovery email sent.' : 'Correo de recuperación enviado.'), backgroundColor: Colors.green));
+                                if (mounted) {
+                                  _mostrarDialogoMensaje(
+                                      isEng ? 'Email Sent' : 'Correo Enviado',
+                                      isEng
+                                          ? 'An email has just been sent to your account ${user.email} with the information to follow for the password change.'
+                                          : 'Se acaba de enviar un correo a tu cuenta ${user.email} con la información a seguir para el cambio de contraseña.',
+                                      isDark
+                                  );
+                                }
                               } catch (e) {
                                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEng ? 'Error sending email.' : 'Error al enviar el correo.'), backgroundColor: const Color(0xFFA30000)));
                               }
@@ -373,7 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- POPUP ELIMINAR CUENTA ---
+  // --- POPUP ELIMINAR CUENTA (AHORA LIMPIA TODO EL RASTRO) ---
   void _mostrarDialogoEliminar() {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
@@ -412,7 +455,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         filled: true,
                         fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
                         border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide.none),
-                        focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFFFF4C4C))),
+                        focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: const BorderSide(color: Color(0xFFFF4C4C))),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -443,8 +486,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   AuthCredential credential = EmailAuthProvider.credential(email: user.email!, password: pass);
                                   await user.reauthenticateWithCredential(credential);
 
+                                  String uid = user.uid;
                                   String safeEmail = user.email!.replaceAll('.', '_');
-                                  await FirebaseDatabase.instance.ref("usuarios").child(safeEmail).remove();
+
+                                  // 1. Borramos el mapeo del DNI para liberarlo
+                                  try {
+                                    final snapshot = await FirebaseDatabase.instance.ref("usuarios").child(uid).get();
+                                    if (snapshot.exists) {
+                                      final data = snapshot.value as Map<dynamic, dynamic>;
+                                      final doc = data["documento"];
+                                      if (doc != null) {
+                                        await FirebaseDatabase.instance.ref("MapeoDNI").child(doc.toString()).remove();
+                                      }
+                                    }
+                                  } catch (_) {}
+
+                                  // 2. Borramos los datos del Perfil
+                                  await FirebaseDatabase.instance.ref("usuarios").child(uid).remove();
+
+                                  // 3. Borramos las Notificaciones
+                                  await FirebaseDatabase.instance.ref("Usuarios").child(safeEmail).remove();
+
+                                  // 4. Borramos la cuenta de acceso de Firebase Auth
                                   await user.delete();
 
                                   if (mounted) {
@@ -481,7 +544,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- MODIFICADO para aceptar Widget ---
   void _mostrarBottomSheetLegal(String titulo, Widget contenidoWidget) {
     bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
     bool isDark = TheRingPrivateApp.themeNotifier.value == ThemeMode.dark;
@@ -512,7 +574,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.65,
                 child: SingleChildScrollView(
-                  child: contenidoWidget,  // Ahora es un Widget
+                  child: contenidoWidget,
                 ),
               ),
               const SizedBox(height: 24),
@@ -694,7 +756,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ================= TEXTOS LEGALES Y DE AYUDA (MODIFICADOS CON RICH TEXT) =================
 
-  // ----- TARIFAS -----
   void _abrirTarifas(bool isEng) {
     String titulo = isEng ? 'How to become a member and tariffs' : '¿Cómo hacerse socio y cuáles son las tarifas?';
     Widget contenido = isEng ? _buildTarifasEN() : _buildTarifasES();
@@ -705,31 +766,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: '1. ¿Cómo hacerse socio?\n', style: bold),
-        TextSpan(text: '• Acude a recepción y solicita el alta de socio.\n', style: normal),
-        TextSpan(text: '• Rellena y firma la hoja de alta con tus datos reales.\n', style: normal),
-        TextSpan(text: '• Acepta expresamente las normas internas del club.\n', style: normal),
-        TextSpan(text: 'o tambien puedes\n', style: bold),
-        TextSpan(text: '• Descarga la aplicación y completa tu registro con el mismo documento de identidad.\n', style: normal),
-        TextSpan(text: '• La primera validación se realiza presencialmente en recepción.\n\n', style: normal),
-        TextSpan(text: '2. ¿Cuándo soy considerado socio activo?\n', style: bold),
-        TextSpan(text: 'Solo se considera socio activo a quien haya abonado la cuota vigente. Si la cuota caduca, la condición de socio queda suspendida hasta la renovación.\n\n', style: normal),
-        TextSpan(text: '3. ¿Cuáles son las ventajas de tener la aplicación?\n', style: bold),
-        TextSpan(text: '• Acceso más ágil mediante identificación con QR.\n', style: normal),
-        TextSpan(text: '• Cuenta personal para gestionar notificaciones y ajustes.\n', style: normal),
-        TextSpan(text: '• Uso de taquilla según disponibilidad y condiciones del club.\n', style: normal),
-        TextSpan(text: '• Acceso a ventajas adicionales en eventos especiales.\n\n', style: normal),
-        TextSpan(text: '4. Cuotas de socio\n', style: bold),
-        TextSpan(text: 'Entrada general por un día:\n', style: bold),
-        TextSpan(text: '• 15 EUR\n\n', style: normal),
-        TextSpan(text: 'Eventos especiales:\n', style: bold),
-        TextSpan(text: '• 20 EUR\n\n', style: normal),
-        TextSpan(text: 'Cuotas VIP:\n', style: bold),
-        TextSpan(text: '• Socio VIP 1 mes: 90 EUR\n', style: normal),
-        TextSpan(text: '• Socio VIP 6 meses: 250 EUR\n\n', style: normal),
-        TextSpan(text: '5. ¿Cambian las tarifas?\n', style: bold),
-        TextSpan(text: 'Las tarifas pueden actualizarse. En caso de cambio, se publicará la versión vigente en recepción y en la aplicación.', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: '1. ¿Cómo hacerse socio?\n', style: bold),
+        const TextSpan(text: '• Acude a recepción y solicita el alta de socio.\n', style: normal),
+        const TextSpan(text: '• Rellena y firma la hoja de alta con tus datos reales.\n', style: normal),
+        const TextSpan(text: '• Acepta expresamente las normas internas del club.\n', style: normal),
+        const TextSpan(text: 'o tambien puedes\n', style: bold),
+        const TextSpan(text: '• Descarga la aplicación y completa tu registro con el mismo documento de identidad.\n', style: normal),
+        const TextSpan(text: '• La primera validación se realiza presencialmente en recepción.\n\n', style: normal),
+        const TextSpan(text: '2. ¿Cuándo soy considerado socio activo?\n', style: bold),
+        const TextSpan(text: 'Solo se considera socio activo a quien haya abonado la cuota vigente. Si la cuota caduca, la condición de socio queda suspendida hasta la renovación.\n\n', style: normal),
+        const TextSpan(text: '3. ¿Cuáles son las ventajas de tener la aplicación?\n', style: bold),
+        const TextSpan(text: '• Acceso más ágil mediante identificación con QR.\n', style: normal),
+        const TextSpan(text: '• Cuenta personal para gestionar notificaciones y ajustes.\n', style: normal),
+        const TextSpan(text: '• Uso de taquilla según disponibilidad y condiciones del club.\n', style: normal),
+        const TextSpan(text: '• Acceso a ventajas adicionales en eventos especiales.\n\n', style: normal),
+        const TextSpan(text: '4. Cuotas de socio\n', style: bold),
+        const TextSpan(text: 'Entrada general por un día:\n', style: bold),
+        const TextSpan(text: '• 15 EUR\n\n', style: normal),
+        const TextSpan(text: 'Eventos especiales:\n', style: bold),
+        const TextSpan(text: '• 20 EUR\n\n', style: normal),
+        const TextSpan(text: 'Cuotas VIP:\n', style: bold),
+        const TextSpan(text: '• Socio VIP 1 mes: 90 EUR\n', style: normal),
+        const TextSpan(text: '• Socio VIP 6 meses: 250 EUR\n\n', style: normal),
+        const TextSpan(text: '5. ¿Cambian las tarifas?\n', style: bold),
+        const TextSpan(text: 'Las tarifas pueden actualizarse. En caso de cambio, se publicará la versión vigente en recepción y en la aplicación.', style: normal),
       ]),
     );
   }
@@ -738,36 +799,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: '1. How to become a member?\n', style: bold),
-        TextSpan(text: '• Go to reception and request membership.\n', style: normal),
-        TextSpan(text: '• Fill out and sign the form with your real data.\n', style: normal),
-        TextSpan(text: '• Expressly accept the club\'s internal rules.\n', style: normal),
-        TextSpan(text: 'or you can also\n', style: bold),
-        TextSpan(text: '• Download the app and complete registration with the same ID document.\n', style: normal),
-        TextSpan(text: '• The first validation is done in person at reception.\n\n', style: normal),
-        TextSpan(text: '2. When am I considered an active member?\n', style: bold),
-        TextSpan(text: 'Only those who have paid the current fee are considered active members. If the fee expires, membership is suspended until renewed.\n\n', style: normal),
-        TextSpan(text: '3. What are the advantages of having the app?\n', style: bold),
-        TextSpan(text: '• Faster access via QR identification.\n', style: normal),
-        TextSpan(text: '• Personal account to manage notifications and settings.\n', style: normal),
-        TextSpan(text: '• Use of lockers subject to availability and club conditions.\n', style: normal),
-        TextSpan(text: '• Access to additional benefits at special events.\n\n', style: normal),
-        TextSpan(text: '4. Membership fees\n', style: bold),
-        TextSpan(text: 'General Admission For One-Day:\n', style: bold),
-        TextSpan(text: '• 15 EUR\n\n', style: normal),
-        TextSpan(text: 'Special events:\n', style: bold),
-        TextSpan(text: '• 20 EUR\n\n', style: normal),
-        TextSpan(text: 'VIP Fees:\n', style: bold),
-        TextSpan(text: '• VIP Member 1 month: 90 EUR\n', style: normal),
-        TextSpan(text: '• VIP Member 6 months: 250 EUR\n\n', style: normal),
-        TextSpan(text: '5. Do the tariffs change?\n', style: bold),
-        TextSpan(text: 'Tariffs may be updated. In case of change, the current version will be published at reception and in the application.', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: '1. How to become a member?\n', style: bold),
+        const TextSpan(text: '• Go to reception and request membership.\n', style: normal),
+        const TextSpan(text: '• Fill out and sign the form with your real data.\n', style: normal),
+        const TextSpan(text: '• Expressly accept the club\'s internal rules.\n', style: normal),
+        const TextSpan(text: 'or you can also\n', style: bold),
+        const TextSpan(text: '• Download the app and complete registration with the same ID document.\n', style: normal),
+        const TextSpan(text: '• The first validation is done in person at reception.\n\n', style: normal),
+        const TextSpan(text: '2. When am I considered an active member?\n', style: bold),
+        const TextSpan(text: 'Only those who have paid the current fee are considered active members. If the fee expires, membership is suspended until renewed.\n\n', style: normal),
+        const TextSpan(text: '3. What are the advantages of having the app?\n', style: bold),
+        const TextSpan(text: '• Faster access via QR identification.\n', style: normal),
+        const TextSpan(text: '• Personal account to manage notifications and settings.\n', style: normal),
+        const TextSpan(text: '• Use of lockers subject to availability and club conditions.\n', style: normal),
+        const TextSpan(text: '• Access to additional benefits at special events.\n\n', style: normal),
+        const TextSpan(text: '4. Membership fees\n', style: bold),
+        const TextSpan(text: 'General Admission For One-Day:\n', style: bold),
+        const TextSpan(text: '• 15 EUR\n\n', style: normal),
+        const TextSpan(text: 'Special events:\n', style: bold),
+        const TextSpan(text: '• 20 EUR\n\n', style: normal),
+        const TextSpan(text: 'VIP Fees:\n', style: bold),
+        const TextSpan(text: '• VIP Member 1 month: 90 EUR\n', style: normal),
+        const TextSpan(text: '• VIP Member 6 months: 250 EUR\n\n', style: normal),
+        const TextSpan(text: '5. Do the tariffs change?\n', style: bold),
+        const TextSpan(text: 'Tariffs may be updated. In case of change, the current version will be published at reception and in the application.', style: normal),
       ]),
     );
   }
 
-  // ----- TÉRMINOS Y CONDICIONES -----
   void _abrirTerminos(bool isEng) {
     String titulo = isEng ? 'Terms and Conditions' : 'Términos y Condiciones';
     Widget contenido = isEng ? _buildTerminosEN() : _buildTerminosES();
@@ -778,26 +838,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: 'Términos y Condiciones\n\n', style: bold),
-        TextSpan(text: 'Estos Términos y Condiciones regulan la descarga, el acceso y el uso de la Aplicación THE RING PRIVATE (en adelante, la Aplicación). El acceso y uso de la Aplicación implica la aceptación expresa de estas condiciones.\n\n', style: normal),
-        TextSpan(text: '1. ¿Cuál es el objeto de la Aplicación?\n', style: bold),
-        TextSpan(text: 'La Aplicación tiene como finalidad gestionar la identificación de socios, facilitar la comunicación de avisos internos y mejorar la experiencia de acceso al club. Su uso es personal e intransferible.\n\n', style: normal),
-        TextSpan(text: '2. ¿Cómo me registro?\n', style: bold),
-        TextSpan(text: 'Para crear una cuenta, el usuario debe facilitar datos reales y vigentes (Nombre, Apellidos, Documento de identidad y Correo electrónico). El usuario es responsable de custodiar su contraseña y de no compartirla con terceros.\n\n', style: normal),
-        TextSpan(text: '3. ¿Cuáles son las normas de uso?\n', style: bold),
-        TextSpan(text: 'El usuario se compromete a utilizar la Aplicación de forma lícita, respetuosa y conforme a la normativa aplicable. Queda prohibido manipular, copiar, descompilar, alter o reutilizar el contenido de la Aplicación sin autorización expresa.\n\n', style: normal),
-        TextSpan(text: '4. ¿Quién es dueño de la Aplicación?\n', style: bold),
-        TextSpan(text: 'Todos los derechos de propiedad intelectual e industrial sobre la Aplicación, su diseño, textos, marcas y elementos gráficos pertenecen a THE RING PRIVATE o a terceros autorizados.\n\n', style: normal),
-        TextSpan(text: '5. ¿Cómo se protegen mis datos personales?\n', style: bold),
-        TextSpan(text: 'Los datos personales se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) y la normativa española vigente. El tratamiento se realiza para gestionar la relación con el socio y el funcionamiento de la Aplicación.\n\n', style: normal),
-        TextSpan(text: 'El usuario puede ejercer sus derechos de Acceso, Rectificación, Supresión, Oposición, Limitación y Portabilidad mediante contacto con la entidad.\n\n', style: normal),
-        TextSpan(text: '6. ¿Qué garantía tiene la Aplicación?\n', style: bold),
-        TextSpan(text: 'THE RING PRIVATE podrá actualizar, modificar o suspender la Aplicación por motivos técnicos, legales o de mantenimiento. Aunque se aplican medidas de seguridad, no se garantiza la disponibilidad absoluta ni la ausencia total de errores técnicos.\n\n', style: normal),
-        TextSpan(text: '7. ¿Puedo borrar mi cuenta?\n', style: bold),
-        TextSpan(text: 'El usuario puede solicitar la eliminación de su cuenta desde la sección de Ajustes. Esta acción elimina el acceso y los datos asociados en los sistemas habilitados, salvo obligación legal de conservación.\n\n', style: normal),
-        TextSpan(text: '8. ¿Qué ley se aplica?\n', style: bold),
-        TextSpan(text: 'Estas condiciones se rigen por la legislación española. Cualquier controversia se someterá a los juzgados y tribunales competentes de Madrid, salvo disposición legal imperativa en contrario.', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: 'Términos y Condiciones\n\n', style: bold),
+        const TextSpan(text: 'Estos Términos y Condiciones regulan la descarga, el acceso y el uso de la Aplicación THE RING PRIVATE (en adelante, la Aplicación). El acceso y uso de la Aplicación implica la aceptación expresa de estas condiciones.\n\n', style: normal),
+        const TextSpan(text: '1. ¿Cuál es el objeto de la Aplicación?\n', style: bold),
+        const TextSpan(text: 'La Aplicación tiene como finalidad gestionar la identificación de socios, facilitar la comunicación de avisos internos y mejorar la experiencia de acceso al club. Su uso es personal e intransferible.\n\n', style: normal),
+        const TextSpan(text: '2. ¿Cómo me registro?\n', style: bold),
+        const TextSpan(text: 'Para crear una cuenta, el usuario debe facilitar datos reales y vigentes (Nombre, Apellidos, Documento de identidad y Correo electrónico). El usuario es responsable de custodiar su contraseña y de no compartirla con terceros.\n\n', style: normal),
+        const TextSpan(text: '3. ¿Cuáles son las normas de uso?\n', style: bold),
+        const TextSpan(text: 'El usuario se compromete a utilizar la Aplicación de forma lícita, respetuosa y conforme a la normativa aplicable. Queda prohibido manipular, copiar, descompilar, alter o reutilizar el contenido de la Aplicación sin autorización expresa.\n\n', style: normal),
+        const TextSpan(text: '4. ¿Quién es dueño de la Aplicación?\n', style: bold),
+        const TextSpan(text: 'Todos los derechos de propiedad intelectual e industrial sobre la Aplicación, su diseño, textos, marcas y elementos gráficos pertenecen a THE RING PRIVATE o a terceros autorizados.\n\n', style: normal),
+        const TextSpan(text: '5. ¿Cómo se protegen mis datos personales?\n', style: bold),
+        const TextSpan(text: 'Los datos personales se tratarán conforme al Reglamento (UE) 2016/679 (RGPD) y la normativa española vigente. El tratamiento se realiza para gestionar la relación con el socio y el funcionamiento de la Aplicación.\n\n', style: normal),
+        const TextSpan(text: 'El usuario puede ejercer sus derechos de Acceso, Rectificación, Supresión, Oposición, Limitación y Portabilidad mediante contacto con la entidad.\n\n', style: normal),
+        const TextSpan(text: '6. ¿Qué garantía tiene la Aplicación?\n', style: bold),
+        const TextSpan(text: 'THE RING PRIVATE podrá actualizar, modificar o suspender la Aplicación por motivos técnicos, legales o de mantenimiento. Aunque se aplican medidas de seguridad, no se garantiza la disponibilidad absoluta ni la ausencia total de errores técnicos.\n\n', style: normal),
+        const TextSpan(text: '7. ¿Puedo borrar mi cuenta?\n', style: bold),
+        const TextSpan(text: 'El usuario puede solicitar la eliminación de su cuenta desde la sección de Ajustes. Esta acción elimina el acceso y los datos asociados en los sistemas habilitados, salvo obligación legal de conservación.\n\n', style: normal),
+        const TextSpan(text: '8. ¿Qué ley se aplica?\n', style: bold),
+        const TextSpan(text: 'Estas condiciones se rigen por la legislación española. Cualquier controversia se someterá a los juzgados y tribunales competentes de Madrid, salvo disposición legal imperativa en contrario.', style: normal),
       ]),
     );
   }
@@ -806,31 +866,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: 'Terms and Conditions\n\n', style: bold),
-        TextSpan(text: 'These Terms and Conditions regulate the download, access, and use of the THE RING PRIVATE application (hereinafter, the Application). Access and use imply express acceptance of these conditions.\n\n', style: normal),
-        TextSpan(text: '1. What is the purpose of the Application?\n', style: bold),
-        TextSpan(text: 'The Application aims to manage member identification, facilitate internal notices, and improve the club access experience. Its use is personal and non-transferable.\n\n', style: normal),
-        TextSpan(text: '2. How do I register?\n', style: bold),
-        TextSpan(text: 'To create an account, the user must provide real and valid data (Name, Surname, ID, and Email). The user is responsible for keeping their password safe and not sharing it.\n\n', style: normal),
-        TextSpan(text: '3. What are the rules of use?\n', style: bold),
-        TextSpan(text: 'The user agrees to use the Application lawfully and respectfully. It is prohibited to manipulate, copy, decompile, alter, or reuse the Application\'s content without express authorization.\n\n', style: normal),
-        TextSpan(text: '4. Who owns the Application?\n', style: bold),
-        TextSpan(text: 'All intellectual and industrial property rights over the Application belong to THE RING PRIVATE or authorized third parties.\n\n', style: normal),
-        TextSpan(text: '5. How are my personal data protected?\n', style: bold),
-        TextSpan(text: 'Personal data will be processed according to the GDPR and current Spanish regulations. The processing is done to manage the relationship with the member and the operation of the Application.\n\n', style: normal),
-        TextSpan(text: 'The user can exercise their rights of Access, Rectification, Deletion, Opposition, Limitation, and Portability by contacting the entity.\n\n', style: normal),
-        TextSpan(text: '6. What guarantee does the Application have?\n', style: bold),
-        TextSpan(text: 'THE RING PRIVATE may update, modify, or suspend the Application for technical or legal reasons. Although security measures are applied, absolute availability or total absence of technical errors is not guaranteed.\n\n', style: normal),
-        TextSpan(text: '7. Can I delete my account?\n', style: bold),
-        TextSpan(text: 'The user can request account deletion from the Settings section. This action eliminates access and associated data in enabled systems, except for legal retention obligations.\n\n', style: normal),
-        TextSpan(text: '8. Which law applies?\n', style: bold),
-        TextSpan(text: 'These conditions are governed by Spanish law. Any controversy will be submitted to the competent courts and tribunals of Madrid, unless a mandatory legal provision states otherwise.', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: 'Terms and Conditions\n\n', style: bold),
+        const TextSpan(text: 'These Terms and Conditions regulate the download, access, and use of the THE RING PRIVATE application (hereinafter, the Application). Access and use imply express acceptance of these conditions.\n\n', style: normal),
+        const TextSpan(text: '1. What is the purpose of the Application?\n', style: bold),
+        const TextSpan(text: 'The Application aims to manage member identification, facilitate internal notices, and improve the club access experience. Its use is personal and non-transferable.\n\n', style: normal),
+        const TextSpan(text: '2. How do I register?\n', style: bold),
+        const TextSpan(text: 'To create an account, the user must provide real and valid data (Name, Surname, ID, and Email). The user is responsible for keeping their password safe and not sharing it.\n\n', style: normal),
+        const TextSpan(text: '3. What are the rules of use?\n', style: bold),
+        const TextSpan(text: 'The user agrees to use the Application lawfully and respectfully. It is prohibited to manipulate, copy, decompile, alter, or reuse the Application\'s content without express authorization.\n\n', style: normal),
+        const TextSpan(text: '4. Who owns the Application?\n', style: bold),
+        const TextSpan(text: 'All intellectual and industrial property rights over the Application belong to THE RING PRIVATE or authorized third parties.\n\n', style: normal),
+        const TextSpan(text: '5. How are my personal data protected?\n', style: bold),
+        const TextSpan(text: 'Personal data will be processed according to the GDPR and current Spanish regulations. The processing is done to manage the relationship with the member and the operation of the Application.\n\n', style: normal),
+        const TextSpan(text: 'The user can exercise their rights of Access, Rectification, Deletion, Opposition, Limitation, and Portability by contacting the entity.\n\n', style: normal),
+        const TextSpan(text: '6. What guarantee does the Application have?\n', style: bold),
+        const TextSpan(text: 'THE RING PRIVATE may update, modify, or suspend the Application for technical or legal reasons. Although security measures are applied, absolute availability or total absence of technical errors is not guaranteed.\n\n', style: normal),
+        const TextSpan(text: '7. Can I delete my account?\n', style: bold),
+        const TextSpan(text: 'The user can request account deletion from the Settings section. This action eliminates access and associated data in enabled systems, except for legal retention obligations.\n\n', style: normal),
+        const TextSpan(text: '8. Which law applies?\n', style: bold),
+        const TextSpan(text: 'These conditions are governed by Spanish law. Any controversy will be submitted to the competent courts and tribunals of Madrid, unless a mandatory legal provision states otherwise.', style: normal),
       ]),
     );
   }
 
-  // ----- AVISO LEGAL -----
   void _abrirAvisoLegal(bool isEng) {
     String titulo = isEng ? 'Legal Notice' : 'Aviso legal';
     Widget contenido = isEng ? _buildAvisoLegalEN() : _buildAvisoLegalES();
@@ -841,26 +900,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: '1. ¿Quién es responsable del tratamiento?\n', style: bold),
-        TextSpan(text: 'El responsable del tratamiento es THE RING PRIVATE.\n', style: normal),
-        TextSpan(text: 'Dirección: C. del Amparo, 75, Centro, 28012 Madrid.\n', style: normal),
-        TextSpan(text: 'Correo de contacto: ringasociacion@gmail.com\n\n', style: normal),
-        TextSpan(text: '2. ¿Qué datos se tratan?\n', style: bold),
-        TextSpan(text: 'Se tratan los datos necesarios para gestionar tu alta y tu acceso como socio: Nombre, Apellidos, Correo electrónico y Documento de identidad.\n\n', style: normal),
-        TextSpan(text: '3. ¿Para qué se usan mis datos?\n', style: bold),
-        TextSpan(text: 'La finalidad principal es gestionar la relación con el socio, su acceso al club y las comunicaciones internas de servicio.\n\n', style: normal),
-        TextSpan(text: '4. ¿Cuál es la base legal del tratamiento?\n', style: bold),
-        TextSpan(text: 'La base legal del tratamiento es el consentimiento del usuario y la ejecución de la relación asociativa.\n\n', style: normal),
-        TextSpan(text: '5. ¿Cuánto tiempo se conservan mis datos?\n', style: bold),
-        TextSpan(text: 'Los datos se conservarán mientras exista relación activa con el socio o durante los plazos legales aplicables.\n\n', style: normal),
-        TextSpan(text: '6. ¿Cuáles son mis derechos?\n', style: bold),
-        TextSpan(text: 'Puedes ejercer tus derechos de Acceso, Rectificación, Supresión, Oposición, Limitación y Portabilidad mediante solicitud al correo de contacto.\n\n', style: normal),
-        TextSpan(text: '7. ¿Cómo se protegen mis datos?\n', style: bold),
-        TextSpan(text: 'Se aplican medidas técnicas y organizativas razonables para prevenir accesos no autorizados, pérdida o alteración de datos.\n\n', style: normal),
-        TextSpan(text: '8. ¿Puede cambiar este aviso?\n', style: bold),
-        TextSpan(text: 'Este aviso puede actualizarse por cambios normativos o mejoras del servicio. La versión vigente estará siempre disponible en la aplicación.\n\n', style: normal),
-        TextSpan(text: 'Fecha de última actualización: 17/04/2026', style: bold),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: '1. ¿Quién es responsable del tratamiento?\n', style: bold),
+        const TextSpan(text: 'El responsable del tratamiento es THE RING PRIVATE.\n', style: normal),
+        const TextSpan(text: 'Dirección: C. del Amparo, 75, Centro, 28012 Madrid.\n', style: normal),
+        const TextSpan(text: 'Correo de contacto: ringasociacion@gmail.com\n\n', style: normal),
+        const TextSpan(text: '2. ¿Qué datos se tratan?\n', style: bold),
+        const TextSpan(text: 'Se tratan los datos necesarios para gestionar tu alta y tu acceso como socio: Nombre, Apellidos, Correo electrónico y Documento de identidad.\n\n', style: normal),
+        const TextSpan(text: '3. ¿Para qué se usan mis datos?\n', style: bold),
+        const TextSpan(text: 'La finalidad principal es gestionar la relación con el socio, su acceso al club y las comunicaciones internas de servicio.\n\n', style: normal),
+        const TextSpan(text: '4. ¿Cuál es la base legal del tratamiento?\n', style: bold),
+        const TextSpan(text: 'La base legal del tratamiento es el consentimiento del usuario y la ejecución de la relación asociativa.\n\n', style: normal),
+        const TextSpan(text: '5. ¿Cuánto tiempo se conservan mis datos?\n', style: bold),
+        const TextSpan(text: 'Los datos se conservarán mientras exista relación activa con el socio o durante los plazos legales aplicables.\n\n', style: normal),
+        const TextSpan(text: '6. ¿Cuáles son mis derechos?\n', style: bold),
+        const TextSpan(text: 'Puedes ejercer tus derechos de Acceso, Rectificación, Supresión, Oposición, Limitación y Portabilidad mediante solicitud al correo de contacto.\n\n', style: normal),
+        const TextSpan(text: '7. ¿Cómo se protegen mis datos?\n', style: bold),
+        const TextSpan(text: 'Se aplican medidas técnicas y organizativas razonables para prevenir accesos no autorizados, pérdida o alteración de datos.\n\n', style: normal),
+        const TextSpan(text: '8. ¿Puede cambiar este aviso?\n', style: bold),
+        const TextSpan(text: 'Este aviso puede actualizarse por cambios normativos o mejoras del servicio. La versión vigente estará siempre disponible en la aplicación.\n\n', style: normal),
+        const TextSpan(text: 'Fecha de última actualización: 17/04/2026', style: bold),
       ]),
     );
   }
@@ -869,31 +928,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: '1. Who is the data controller?\n', style: bold),
-        TextSpan(text: 'The data controller is THE RING PRIVATE.\n', style: normal),
-        TextSpan(text: 'Address: C. del Amparo, 75, Centro, 28012 Madrid.\n', style: normal),
-        TextSpan(text: 'Contact email: ringasociacion@gmail.com\n\n', style: normal),
-        TextSpan(text: '2. What data is processed?\n', style: bold),
-        TextSpan(text: 'We process the necessary data to manage your registration and your access as a member: Name, Surnames, Email, and ID document.\n\n', style: normal),
-        TextSpan(text: '3. Why is my data used?\n', style: bold),
-        TextSpan(text: 'The main purpose is to manage the relationship with the member, their access to the club, and internal service communications.\n\n', style: normal),
-        TextSpan(text: '4. What is the legal basis?\n', style: bold),
-        TextSpan(text: 'The legal basis of the processing is the consent of the user and the execution of the associative relationship.\n\n', style: normal),
-        TextSpan(text: '5. How long is my data kept?\n', style: bold),
-        TextSpan(text: 'Data will be kept as long as there is an active relationship with the member or during the applicable legal periods.\n\n', style: normal),
-        TextSpan(text: '6. What are my rights?\n', style: bold),
-        TextSpan(text: 'You can exercise your rights of Access, Rectification, Deletion, Opposition, Limitation, and Portability by requesting it via the contact email.\n\n', style: normal),
-        TextSpan(text: '7. How is my data protected?\n', style: bold),
-        TextSpan(text: 'Reasonable technical and organizational measures are applied to prevent unauthorized access, loss, or alteration of data.\n\n', style: normal),
-        TextSpan(text: '8. Can this notice change?\n', style: bold),
-        TextSpan(text: 'This notice may be updated due to regulatory changes or service improvements. The current version will always be available in the application.\n\n', style: normal),
-        TextSpan(text: 'Date of last update: 17/04/2026', style: bold),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: '1. Who is the data controller?\n', style: bold),
+        const TextSpan(text: 'The data controller is THE RING PRIVATE.\n', style: normal),
+        const TextSpan(text: 'Address: C. del Amparo, 75, Centro, 28012 Madrid.\n', style: normal),
+        const TextSpan(text: 'Contact email: ringasociacion@gmail.com\n\n', style: normal),
+        const TextSpan(text: '2. What data is processed?\n', style: bold),
+        const TextSpan(text: 'We process the necessary data to manage your registration and your access as a member: Name, Surnames, Email, and ID document.\n\n', style: normal),
+        const TextSpan(text: '3. Why is my data used?\n', style: bold),
+        const TextSpan(text: 'The main purpose is to manage the relationship with the member, their access to the club, and internal service communications.\n\n', style: normal),
+        const TextSpan(text: '4. What is the legal basis?\n', style: bold),
+        const TextSpan(text: 'The legal basis of the processing is the consent of the user and the execution of the associative relationship.\n\n', style: normal),
+        const TextSpan(text: '5. How long is my data kept?\n', style: bold),
+        const TextSpan(text: 'Data will be kept as long as there is an active relationship with the member or during the applicable legal periods.\n\n', style: normal),
+        const TextSpan(text: '6. What are my rights?\n', style: bold),
+        const TextSpan(text: 'You can exercise your rights of Access, Rectification, Deletion, Opposition, Limitation, and Portability by requesting it via the contact email.\n\n', style: normal),
+        const TextSpan(text: '7. How is my data protected?\n', style: bold),
+        const TextSpan(text: 'Reasonable technical and organizational measures are applied to prevent unauthorized access, loss, or alteration of data.\n\n', style: normal),
+        const TextSpan(text: '8. Can this notice change?\n', style: bold),
+        const TextSpan(text: 'This notice may be updated due to regulatory changes or service improvements. The current version will always be available in the application.\n\n', style: normal),
+        const TextSpan(text: 'Date of last update: 17/04/2026', style: bold),
       ]),
     );
   }
 
-  // ----- AYUDA Y SOPORTE -----
   void _abrirAyuda(bool isEng) {
     String titulo = isEng ? 'Help and Support' : '¿Necesitas Ayuda y Soporte?';
     Widget contenido = isEng ? _buildAyudaEN() : _buildAyudaES();
@@ -904,27 +962,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: '¿Tienes un problema con la aplicación?\n\n', style: bold),
-        TextSpan(text: 'Sigue este orden:\n\n', style: normal),
-        TextSpan(text: '1. Revisa primero la sección de ', style: normal),
-        TextSpan(text: 'Preguntas Frecuentes', style: bold),
-        TextSpan(text: '.\n', style: normal),
-        TextSpan(text: '2. Si no se resuelve, escribe a ', style: normal),
-        TextSpan(text: 'ringasociacion@gmail.com', style: bold),
-        TextSpan(text: ' indicando:\n', style: normal),
-        TextSpan(text: '• Correo de tu cuenta\n', style: normal),
-        TextSpan(text: '• Documento usado en el registro\n', style: normal),
-        TextSpan(text: '• Modelo de móvil\n', style: normal),
-        TextSpan(text: '• Versión de Android\n', style: normal),
-        TextSpan(text: '• Descripción exacta del error\n\n', style: normal),
-        TextSpan(text: 'Soporte por correo:\n', style: bold),
-        TextSpan(text: 'ringasociacion@gmail.com\n\n', style: normal),
-        TextSpan(text: 'Redes oficiales:\n', style: bold),
-        TextSpan(text: 'Facebook: https://www.facebook.com/theringprivate\n', style: normal),
-        TextSpan(text: 'Instagram: https://www.instagram.com/theringprivate\n\n', style: normal),
-        TextSpan(text: '¿Dónde estamos?\n', style: bold),
-        TextSpan(text: 'C. del Amparo, 75, Centro, 28012 Madrid', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: '¿Tienes un problema con la aplicación?\n\n', style: bold),
+        const TextSpan(text: 'Sigue este orden:\n\n', style: normal),
+        const TextSpan(text: '1. Revisa primero la sección de ', style: normal),
+        const TextSpan(text: 'Preguntas Frecuentes', style: bold),
+        const TextSpan(text: '.\n', style: normal),
+        const TextSpan(text: '2. Si no se resuelve, escribe a ', style: normal),
+        const TextSpan(text: 'ringasociacion@gmail.com', style: bold),
+        const TextSpan(text: ' indicando:\n', style: normal),
+        const TextSpan(text: '• Correo de tu cuenta\n', style: normal),
+        const TextSpan(text: '• Documento usado en el registro\n', style: normal),
+        const TextSpan(text: '• Modelo de móvil\n', style: normal),
+        const TextSpan(text: '• Versión de Android\n', style: normal),
+        const TextSpan(text: '• Descripción exacta del error\n\n', style: normal),
+        const TextSpan(text: 'Soporte por correo:\n', style: bold),
+        const TextSpan(text: 'ringasociacion@gmail.com\n\n', style: normal),
+        const TextSpan(text: 'Redes oficiales:\n', style: bold),
+        const TextSpan(text: 'Facebook: https://www.facebook.com/theringprivate\n', style: normal),
+        const TextSpan(text: 'Instagram: https://www.instagram.com/theringprivate\n\n', style: normal),
+        const TextSpan(text: '¿Dónde estamos?\n', style: bold),
+        const TextSpan(text: 'C. del Amparo, 75, Centro, 28012 Madrid', style: normal),
       ]),
     );
   }
@@ -933,32 +991,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: 'Do you have a problem with the application?\n\n', style: bold),
-        TextSpan(text: 'Follow this order:\n\n', style: normal),
-        TextSpan(text: '1. First, check the ', style: normal),
-        TextSpan(text: 'Frequently Asked Questions', style: bold),
-        TextSpan(text: ' section.\n', style: normal),
-        TextSpan(text: '2. If it is not resolved, write to ', style: normal),
-        TextSpan(text: 'ringasociacion@gmail.com', style: bold),
-        TextSpan(text: ' providing:\n', style: normal),
-        TextSpan(text: '• Your account email\n', style: normal),
-        TextSpan(text: '• ID document used during registration\n', style: normal),
-        TextSpan(text: '• Mobile model\n', style: normal),
-        TextSpan(text: '• Android version\n', style: normal),
-        TextSpan(text: '• Exact description of the error\n\n', style: normal),
-        TextSpan(text: 'Email support:\n', style: bold),
-        TextSpan(text: 'ringasociacion@gmail.com\n\n', style: normal),
-        TextSpan(text: 'Official networks:\n', style: bold),
-        TextSpan(text: 'Facebook: https://www.facebook.com/theringprivate\n', style: normal),
-        TextSpan(text: 'Instagram: https://www.instagram.com/theringprivate\n\n', style: normal),
-        TextSpan(text: 'Where are we?\n', style: bold),
-        TextSpan(text: 'C. del Amparo, 75, Centro, 28012 Madrid', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: 'Do you have a problem with the application?\n\n', style: bold),
+        const TextSpan(text: 'Follow this order:\n\n', style: normal),
+        const TextSpan(text: '1. First, check the ', style: normal),
+        const TextSpan(text: 'Frequently Asked Questions', style: bold),
+        const TextSpan(text: ' section.\n', style: normal),
+        const TextSpan(text: '2. If it is not resolved, write to ', style: normal),
+        const TextSpan(text: 'ringasociacion@gmail.com', style: bold),
+        const TextSpan(text: ' providing:\n', style: normal),
+        const TextSpan(text: '• Your account email\n', style: normal),
+        const TextSpan(text: '• ID document used during registration\n', style: normal),
+        const TextSpan(text: '• Mobile model\n', style: normal),
+        const TextSpan(text: '• Android version\n', style: normal),
+        const TextSpan(text: '• Exact description of the error\n\n', style: normal),
+        const TextSpan(text: 'Email support:\n', style: bold),
+        const TextSpan(text: 'ringasociacion@gmail.com\n\n', style: normal),
+        const TextSpan(text: 'Official networks:\n', style: bold),
+        const TextSpan(text: 'Facebook: https://www.facebook.com/theringprivate\n', style: normal),
+        const TextSpan(text: 'Instagram: https://www.instagram.com/theringprivate\n\n', style: normal),
+        const TextSpan(text: 'Where are we?\n', style: bold),
+        const TextSpan(text: 'C. del Amparo, 75, Centro, 28012 Madrid', style: normal),
       ]),
     );
   }
 
-  // ----- FAQ -----
   void _abrirFAQ(bool isEng) {
     String titulo = isEng ? 'Frequently Asked Questions (FAQ)' : '¿Preguntas Frecuentes (FAQ)?';
     Widget contenido = isEng ? _buildFAQEN() : _buildFAQES();
@@ -969,21 +1026,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: '1. ¿Cómo me registro correctamente?\n', style: bold),
-        TextSpan(text: 'Pulsa en Registrarse, completa Nombre, Apellidos, DNI/NIE/Pasaporte, Correo y una Contraseña segura. Debes aceptar los Términos y Condiciones para finalizar.\n\n', style: normal),
-        TextSpan(text: '2. ¿Qué documentos son válidos para el registro?\n', style: bold),
-        TextSpan(text: 'Se aceptan DNI, NIE o Pasaporte en vigor.\n\n', style: normal),
-        TextSpan(text: '3. ¿He olvidado mi contraseña? ¿Qué hago?\n', style: bold),
-        TextSpan(text: 'En Inicio de sesión, pulsa "Olvidaste tu contraseña" y sigue el proceso de recuperación por correo.\n\n', style: normal),
-        TextSpan(text: '4. ¿El QR no se muestra? ¿Cómo lo soluciono?\n', style: bold),
-        TextSpan(text: 'Comprueba la conexión a Internet, cierra y abre la pantalla del QR y vuelve a intentarlo. Si el problema persiste, cierra sesión y entra de nuevo.\n\n', style: normal),
-        TextSpan(text: '5. ¿Puedo cambiar mis datos personales?\n', style: bold),
-        TextSpan(text: 'Los datos sensibles de identificación se gestionan en recepción para verificar la identidad.\n\n', style: normal),
-        TextSpan(text: '6. ¿Cómo elimino mi cuenta?\n', style: bold),
-        TextSpan(text: 'En Ajustes, entra en "Eliminar cuenta", verifica tus credenciales y confirma la eliminación final.\n\n', style: normal),
-        TextSpan(text: '7. ¿Qué pasa con mis notificaciones si las elimino?\n', style: bold),
-        TextSpan(text: 'Si eliminas una notificación en tu perfil, deja de mostrarse en tu cuenta. Los demás usuarios mantienen sus propias notificaciones de forma independiente.', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: '1. ¿Cómo me registro correctamente?\n', style: bold),
+        const TextSpan(text: 'Pulsa en Registrarse, completa Nombre, Apellidos, DNI/NIE/Pasaporte, Correo y una Contraseña segura. Debes aceptar los Términos y Condiciones para finalizar.\n\n', style: normal),
+        const TextSpan(text: '2. ¿Qué documentos son válidos para el registro?\n', style: bold),
+        const TextSpan(text: 'Se aceptan DNI, NIE o Pasaporte en vigor.\n\n', style: normal),
+        const TextSpan(text: '3. ¿He olvidado mi contraseña? ¿Qué hago?\n', style: bold),
+        const TextSpan(text: 'En Inicio de sesión, pulsa "Olvidaste tu contraseña" y sigue el proceso de recuperación por correo.\n\n', style: normal),
+        const TextSpan(text: '4. ¿El QR no se muestra? ¿Cómo lo soluciono?\n', style: bold),
+        const TextSpan(text: 'Comprueba la conexión a Internet, cierra y abre la pantalla del QR y vuelve a intentarlo. Si el problema persiste, cierra sesión y entra de nuevo.\n\n', style: normal),
+        const TextSpan(text: '5. ¿Puedo cambiar mis datos personales?\n', style: bold),
+        const TextSpan(text: 'Los datos sensibles de identificación se gestionan en recepción para verificar la identidad.\n\n', style: normal),
+        const TextSpan(text: '6. ¿Cómo elimino mi cuenta?\n', style: bold),
+        const TextSpan(text: 'En Ajustes, entra en "Eliminar cuenta", verifica tus credenciales y confirma la eliminación final.\n\n', style: normal),
+        const TextSpan(text: '7. ¿Qué pasa con mis notificaciones si las elimino?\n', style: bold),
+        const TextSpan(text: 'Si eliminas una notificación en tu perfil, deja de mostrarse en tu cuenta. Los demás usuarios mantienen sus propias notificaciones de forma independiente.', style: normal),
       ]),
     );
   }
@@ -992,21 +1049,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const bold = TextStyle(fontWeight: FontWeight.bold);
     const normal = TextStyle(fontWeight: FontWeight.normal);
     return Text.rich(
-      TextSpan(style: TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
-        TextSpan(text: '1. How do I register correctly?\n', style: bold),
-        TextSpan(text: 'Tap Register, fill in your Name, Surname, ID/Passport, Email, and a secure Password. You must accept the Terms and Conditions to finish.\n\n', style: normal),
-        TextSpan(text: '2. What documents are valid for registration?\n', style: bold),
-        TextSpan(text: 'Valid ID, NIE, or Passport are accepted.\n\n', style: normal),
-        TextSpan(text: '3. I forgot my password. What do I do?\n', style: bold),
-        TextSpan(text: 'At login, tap "Forgot your password" and follow the email recovery process.\n\n', style: normal),
-        TextSpan(text: '4. The QR is not showing. How do I fix it?\n', style: bold),
-        TextSpan(text: 'Check your internet connection, close and reopen the QR screen, and try again. If the problem persists, log out and log back in.\n\n', style: normal),
-        TextSpan(text: '5. Can I change my personal data?\n', style: bold),
-        TextSpan(text: 'Sensitive identification data is managed at reception to verify identity.\n\n', style: normal),
-        TextSpan(text: '6. How do I delete my account?\n', style: bold),
-        TextSpan(text: 'In Settings, go to "Delete Account", verify your credentials, and confirm the final deletion.\n\n', style: normal),
-        TextSpan(text: '7. What happens to my notifications if I delete them?\n', style: bold),
-        TextSpan(text: 'If you delete a notification in your profile, it stops showing in your account. Other users keep their own notifications independently.', style: normal),
+      TextSpan(style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.5), children: [
+        const TextSpan(text: '1. How do I register correctly?\n', style: bold),
+        const TextSpan(text: 'Tap Register, fill in your Name, Surname, ID/Passport, Email, and a secure Password. You must accept the Terms and Conditions to finish.\n\n', style: normal),
+        const TextSpan(text: '2. What documents are valid for registration?\n', style: bold),
+        const TextSpan(text: 'Valid ID, NIE, or Passport are accepted.\n\n', style: normal),
+        const TextSpan(text: '3. I forgot my password. What do I do?\n', style: bold),
+        const TextSpan(text: 'At login, tap "Forgot your password" and follow the email recovery process.\n\n', style: normal),
+        const TextSpan(text: '4. The QR is not showing. How do I fix it?\n', style: bold),
+        const TextSpan(text: 'Check your internet connection, close and reopen the QR screen, and try again. If the problem persists, log out and log back in.\n\n', style: normal),
+        const TextSpan(text: '5. Can I change my personal data?\n', style: bold),
+        const TextSpan(text: 'Sensitive identification data is managed at reception to verify identity.\n\n', style: normal),
+        const TextSpan(text: '6. How do I delete my account?\n', style: bold),
+        const TextSpan(text: 'In Settings, go to "Delete Account", verify your credentials, and confirm the final deletion.\n\n', style: normal),
+        const TextSpan(text: '7. What happens to my notifications if I delete them?\n', style: bold),
+        const TextSpan(text: 'If you delete a notification in your profile, it stops showing in your account. Other users keep their own notifications independently.', style: normal),
       ]),
     );
   }
