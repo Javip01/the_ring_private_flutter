@@ -3,9 +3,18 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // NUEVO IMPORT
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+
+// NUEVO: Manejador de mensajes en segundo plano (Top-level)
+// Esta función debe estar fuera de cualquier clase.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print("Mensaje en segundo plano recibido: ${message.messageId}");
+}
 
 void main() async {
   // Asegura que los cimientos de Flutter están listos
@@ -31,6 +40,9 @@ void main() async {
       await Firebase.initializeApp();
     }
   }
+
+  // NUEVO: Registra el manejador de notificaciones en segundo plano
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Arranca tu app
   runApp(const TheRingPrivateApp());

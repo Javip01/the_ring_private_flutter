@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -58,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   );
 
   String _currentQrData = "CARGANDO";
-  int _secondsLeft = 60;
+  int _secondsLeft = 900; // 15 minutos por defecto
   Timer? _qrTimer;
 
   Map<String, dynamic>? _userProfileData;
@@ -88,8 +89,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
     _cargarDatosUsuario();
     _configurarEscuchaNotificaciones();
+    _configurarPushNotifications();
     _menuController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+  }
+
+  // --- CONFIGURACIÓN PUSH ---
+  void _configurarPushNotifications() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      await messaging.subscribeToTopic('notificaciones_globales');
+    }
   }
 
   Future<void> _cargarDatosUsuario() async {
@@ -425,9 +442,86 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // --- NUEVA LÓGICA DE CÓDIGO QR SEGURO ---
   void _mostrarBottomSheetQR() {
     _qrSessionNonce = "session_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(100000)}";
-    _generarNuevoQR();
+    _cerrarQR();
+
+    bool isLoading = true;
+    bool hasError = false;
+    StateSetter? modalSetState;
+
+    // Función asíncrona que genera y valida con el servidor
+    Future<void> generar() async {
+      if (modalSetState != null) modalSetState!(() { isLoading = true; hasError = false; });
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null || user.email == null) return;
+
+      String email = user.email!;
+      String uid = user.uid;
+      String emailSafe = email.replaceAll('.', '_');
+      int issuedAt = DateTime.now().millisecondsSinceEpoch;
+      int expiresAt = issuedAt + 900000; // 15 Minutos en milisegundos (15 * 60 * 1000)
+      String qrToken = "token_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(100000)}";
+
+      Map<String, dynamic> datosPerfilParaQR = _userProfileData ?? {};
+      datosPerfilParaQR["codeUser"] = uid;
+
+      Map<String, dynamic> qrData = {
+        "token": qrToken,
+        "session": _qrSessionNonce,
+        "issuedAt": issuedAt,
+        "expiresAt": expiresAt,
+        "emailSafe": emailSafe,
+        "perfil": datosPerfilParaQR,
+      };
+
+      try {
+        // VALIDACIÓN DE SERVIDOR: Subimos el Token a Firebase y esperamos confirmación
+        await _db.ref("SesionesQR_Activas").child(emailSafe).set({
+          "token": qrToken,
+          "timestamp": ServerValue.timestamp,
+        }).timeout(const Duration(seconds: 8));
+
+        // El servidor ha respondido correctamente, preparamos la UI
+        _currentQrData = jsonEncode(qrData);
+        _secondsLeft = 900;
+
+        if (modalSetState != null) {
+          modalSetState!(() {
+            isLoading = false;
+            hasError = false;
+          });
+        }
+
+        // Arrancamos el temporizador solo cuando el servidor nos da el OK
+        _qrTimer?.cancel();
+        _qrTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (modalSetState != null) {
+            modalSetState!(() {
+              if (_secondsLeft > 1) {
+                _secondsLeft--;
+              } else {
+                timer.cancel();
+                generar(); // Regeneración automática al agotarse los 15 minutos
+              }
+            });
+          }
+        });
+      } catch (e) {
+        // Error de conexión
+        if (modalSetState != null) {
+          modalSetState!(() {
+            isLoading = false;
+            hasError = true;
+          });
+        }
+      }
+    }
+
+    // Disparamos la función asíncrona justo antes de abrir la pantalla
+    generar();
 
     showModalBottomSheet(
       context: context,
@@ -436,19 +530,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return StatefulBuilder(builder: (context, setStateModal) {
-          _qrTimer?.cancel();
-          _qrTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            if (mounted) {
-              setStateModal(() {
-                if (_secondsLeft > 1) {
-                  _secondsLeft--;
-                } else {
-                  _generarNuevoQR();
-                }
-              });
-            }
-          });
+          modalSetState = setStateModal;
           bool isEng = TheRingPrivateApp.isEnglishNotifier.value;
+
+          // Cálculo del formato MM:SS
+          String minutesStr = (_secondsLeft ~/ 60).toString().padLeft(2, '0');
+          String secondsStr = (_secondsLeft % 60).toString().padLeft(2, '0');
 
           return SingleChildScrollView(
             child: Padding(
@@ -460,13 +547,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   const SizedBox(height: 24),
                   Text(isEng ? 'Dynamic Secure Access' : 'Acceso Seguro Dinámico', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text(isEng ? 'This code expires in $_secondsLeft seconds' : 'Este código caduca en $_secondsLeft segundos', style: const TextStyle(color: Color(0xFFFF4C4C), fontSize: 14)),
-                  const SizedBox(height: 24),
-                  Card(color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Padding(padding: const EdgeInsets.all(16.0), child: QrImageView(data: _currentQrData, size: 250.0))),
-                  const SizedBox(height: 32),
+
+                  // LÓGICA VISUAL CONDICIONAL
+                  if (isLoading) ...[
+                    const SizedBox(height: 48),
+                    const CircularProgressIndicator(color: Color(0xFFA30000)),
+                    const SizedBox(height: 16),
+                    Text(isEng ? 'Validating securely...' : 'Validando con el servidor...', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                    const SizedBox(height: 48),
+                  ] else if (hasError) ...[
+                    const SizedBox(height: 48),
+                    const Icon(Icons.wifi_off, color: Color(0xFFFF4C4C), size: 48),
+                    const SizedBox(height: 16),
+                    Text(isEng ? 'Connection error' : 'Error de conexión', style: const TextStyle(color: Color(0xFFFF4C4C), fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF333333), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
+                      onPressed: () => generar(),
+                      child: Text(isEng ? 'RETRY' : 'REINTENTAR', style: const TextStyle(color: Colors.white)),
+                    ),
+                    const SizedBox(height: 32),
+                  ] else ...[
+                    Text(isEng ? 'This code expires in $minutesStr:$secondsStr' : 'Este código caduca en $minutesStr:$secondsStr', style: const TextStyle(color: Color(0xFFFF4C4C), fontSize: 14)),
+                    const SizedBox(height: 24),
+                    Card(color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Padding(padding: const EdgeInsets.all(16.0), child: QrImageView(data: _currentQrData, size: 250.0))),
+                    const SizedBox(height: 32),
+                  ],
+
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA30000), minimumSize: const Size(double.infinity, 50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
                     onPressed: () {
+                      modalSetState = null;
                       _cerrarQR();
                       Navigator.pop(context);
                     },
@@ -479,36 +590,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         });
       },
     ).then((_) {
+      modalSetState = null;
       _cerrarQR();
-    });
-  }
-
-  void _generarNuevoQR() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || user.email == null) return;
-
-    String email = user.email!;
-    String uid = user.uid;
-    String emailSafe = email.replaceAll('.', '_');
-    int issuedAt = DateTime.now().millisecondsSinceEpoch;
-    int expiresAt = issuedAt + 60000;
-    String qrToken = "token_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(100000)}";
-
-    Map<String, dynamic> datosPerfilParaQR = _userProfileData ?? {};
-    datosPerfilParaQR["codeUser"] = uid;
-
-    Map<String, dynamic> qrData = {
-      "token": qrToken,
-      "session": _qrSessionNonce,
-      "issuedAt": issuedAt,
-      "expiresAt": expiresAt,
-      "emailSafe": emailSafe,
-      "perfil": datosPerfilParaQR,
-    };
-
-    setState(() {
-      _currentQrData = jsonEncode(qrData);
-      _secondsLeft = 60;
     });
   }
 
