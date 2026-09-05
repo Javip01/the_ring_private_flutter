@@ -89,12 +89,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
     _cargarDatosUsuario();
     _configurarEscuchaNotificaciones();
-    _configurarPushNotifications();
+    _configurarPushNotifications(); 
     _menuController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
   }
 
-  // --- CONFIGURACIÓN PUSH ---
+  // --- CONFIGURACIÓN PUSH BLINDADA PARA IOS ---
+  // --- CONFIGURACIÓN PUSH BLINDADA PARA IOS ---
   void _configurarPushNotifications() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
@@ -105,6 +106,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      // SOLUCIÓN AL BUG DE IOS: Forzamos la obtención del Token FCM antes de suscribir.
+      // Esto asegura que el puente nativo entre APNs (Apple) y Firebase esté 100% construido.
+      try {
+        String? token = await messaging.getToken();
+        debugPrint("FCM Token generado: $token");
+      } catch (e) {
+        debugPrint("Error generando FCM Token: $e");
+      }
+
+      // Una vez forzado el token, la suscripción al topic nunca falla
       await messaging.subscribeToTopic('notificaciones_globales');
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'home_screen.dart'; // IMPORTANTE: Añadido para poder navegar a la Home
 import '../main.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -199,7 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "fecha_asignacion_taquilla": "",
       };
 
-      // 6. Fusión de datos si era usuario antiguo (AÑADIDOS LOS '!' PARA EVITAR EL ERROR DEL COMPILADOR)
+      // 6. Fusión de datos si era usuario antiguo
       if (oldUserDataToKeep != null) {
         oldUserDataToKeep!.forEach((key, value) {
           if (!newData.containsKey(key)) {
@@ -213,13 +214,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       await FirebaseDatabase.instance.ref("usuarios").child(newUid).set(newData);
 
-      // Borramos registro antiguo fantasma para evitar duplicados (AÑADIDO EL '!')
+      // Borramos registro antiguo fantasma para evitar duplicados
       if (oldUid != null && oldUid != newUid) {
         await FirebaseDatabase.instance.ref("usuarios").child(oldUid!).remove();
       }
 
+      // =====================================================================
+      // NUEVO: VERIFICACIÓN ACTIVA DE DATOS PARA AUTOLOGIN SEGURO
+      // =====================================================================
+      // Mantenemos el botón "cargando" y forzamos a la app a esperar a que el
+      // servidor confirme que los datos del perfil se han propagado correctamente.
+      for (int i = 0; i < 15; i++) { 
+        final checkSnap = await FirebaseDatabase.instance.ref("usuarios").child(newUid).get();
+        if (checkSnap.exists) {
+          break; // Los datos están listos, rompemos el bucle
+        }
+        await Future.delayed(const Duration(milliseconds: 500)); // Esperamos medio segundo y volvemos a mirar
+      }
+
       if (!mounted) return;
-      Navigator.pop(context);
+
+      // Destruimos TODA la pila de pantallas (incluyendo la Home vacía que se haya
+      // podido montar por debajo) y forzamos a cargar una Home completamente nueva.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (Route<dynamic> route) => false,
+      );
 
     } on FirebaseAuthException catch (e) {
       setState(() {
